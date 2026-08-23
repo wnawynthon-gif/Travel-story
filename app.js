@@ -1,30 +1,163 @@
+const $ = (s) => document.querySelector(s);
 
-const $ = s => document.querySelector(s);
-const place = $('#place'), theme = $('#theme'), title = $('#resultTitle'), text = $('#resultText'),
-cards = $('#storyCards'), copyBtn = $('#copyBtn'), score = $('#score');
-let command = '';
+const place = $("#place");
+const theme = $("#theme");
+const title = $("#resultTitle");
+const text = $("#resultText");
+const cards = $("#storyCards");
+const copyBtn = $("#copyBtn");
+const score = $("#score");
 
-const sampleAngles = [
-  ['สิ่งที่คนเห็น แต่ไม่รู้ที่มา','หา object / sign / ritual ที่พาเข้าสู่ hidden history'],
-  ['Tourist story vs local story','ตรวจว่าภาพจำของนักท่องเที่ยวต่างจากชีวิตคนท้องถิ่นอย่างไร'],
-  ['กฎหมายที่สร้างวัฒนธรรม','ค้น law / decree / privilege ที่ยังทิ้งร่องรอยถึงปัจจุบัน'],
-  ['กินหรือดื่มประวัติศาสตร์','หา food & drink ที่เชื่อมกับคน เหตุการณ์ และพื้นที่จริง'],
-  ['อดีตที่ยังถ่ายรูปได้วันนี้','เลือกเรื่องที่มี physical evidence ให้ตามรอยและถ่ายภาพ']
-];
+let command = "";
 
-function run(action='SCOUT'){
-  const p = place.value.trim();
-  if(!p){ place.focus(); return; }
-  command = `${action}: ${p}${theme.value !== 'Auto Discover' ? ' / '+theme.value : ''}`;
-  localStorage.setItem('tse-last-place', p);
-  title.textContent = p;
-  score.textContent = action;
-  text.textContent = `คำสั่งพร้อมใช้: ${command}`;
-  cards.innerHTML = sampleAngles.map((x,i)=>`<div class="card"><strong>${String(i+1).padStart(2,'0')} · ${x[0]}</strong><small>${x[1]}</small></div>`).join('');
-  copyBtn.hidden = false;
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
-$('#discover').onclick=()=>run('SCOUT');
-document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>run(b.dataset.action));
-copyBtn.onclick=async()=>{ await navigator.clipboard.writeText(command); copyBtn.textContent='Copied ✓'; setTimeout(()=>copyBtn.textContent='Copy TSE Command',1200); };
-place.value = localStorage.getItem('tse-last-place') || '';
-if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));
+
+async function run(action = "SCOUT") {
+  const p = place?.value?.trim();
+
+  if (!p) {
+    place?.focus();
+    return;
+  }
+
+  const selectedTheme =
+    theme?.value && theme.value !== "Auto Discover"
+      ? theme.value
+      : "";
+
+  command = `${action}: ${p}${selectedTheme ? " / " + selectedTheme : ""}`;
+
+  localStorage.setItem("tse-last-place", p);
+
+  title.textContent = p;
+  score.textContent = "AI";
+  text.textContent = "กำลังค้นหาเรื่องราว...";
+  cards.innerHTML = "";
+  copyBtn.hidden = true;
+
+  try {
+    const response = await fetch("/api/discover", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        place: p,
+        theme: selectedTheme,
+        action
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "API request failed");
+    }
+
+    const stories = Array.isArray(data.stories)
+      ? data.stories
+      : Array.isArray(data.results)
+      ? data.results
+      : [];
+
+    title.textContent = data.title || p;
+    text.textContent =
+      data.summary ||
+      data.intro ||
+      `พบเรื่องราวสำหรับ ${p}`;
+
+    if (stories.length) {
+      cards.innerHTML = stories
+        .map((story, index) => {
+          const storyTitle =
+            typeof story === "string"
+              ? `เรื่องที่ ${index + 1}`
+              : story.title || `เรื่องที่ ${index + 1}`;
+
+          const storyText =
+            typeof story === "string"
+              ? story
+              : story.description ||
+                story.story ||
+                story.text ||
+                "";
+
+          return `
+            <div class="card">
+              <strong>
+                ${String(index + 1).padStart(2, "0")} ·
+                ${escapeHtml(storyTitle)}
+              </strong>
+              <div>${escapeHtml(storyText)}</div>
+            </div>
+          `;
+        })
+        .join("");
+    } else {
+      cards.innerHTML = `
+        <div class="card">
+          <strong>AI Result</strong>
+          <div>${escapeHtml(
+            data.text ||
+            data.content ||
+            data.answer ||
+            "ได้รับคำตอบจาก AI แล้ว"
+          )}</div>
+        </div>
+      `;
+    }
+
+    copyBtn.hidden = false;
+  } catch (error) {
+    console.error(error);
+
+    score.textContent = "ERROR";
+    text.textContent =
+      "เชื่อมต่อ AI ไม่สำเร็จ: " +
+      (error?.message || "Unknown error");
+
+    cards.innerHTML = "";
+    copyBtn.hidden = true;
+  }
+}
+
+document.querySelectorAll("[data-action]").forEach((button) => {
+  button.addEventListener("click", () => {
+    run(button.dataset.action);
+  });
+});
+
+copyBtn?.addEventListener("click", async () => {
+  const result = [
+    command,
+    title?.textContent || "",
+    text?.textContent || "",
+    cards?.innerText || ""
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  try {
+    await navigator.clipboard.writeText(result);
+    copyBtn.textContent = "Copied ✓";
+
+    setTimeout(() => {
+      copyBtn.textContent = "Copy TSE Command";
+    }, 1500);
+  } catch {
+    alert("ไม่สามารถ Copy ได้");
+  }
+});
+
+const lastPlace = localStorage.getItem("tse-last-place");
+
+if (lastPlace && place) {
+  place.value = lastPlace;
+}
