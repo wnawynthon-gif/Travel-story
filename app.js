@@ -127,6 +127,11 @@ async function run(action = "SCOUT") {
     copyBtn.hidden = true;
   }
 }
+const discoverBtn = document.querySelector("#discover");
+
+discoverBtn?.addEventListener("click", () => {
+  run("SCOUT");
+});
 
 document.querySelectorAll("[data-action]").forEach((button) => {
   button.addEventListener("click", () => {
