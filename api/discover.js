@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { destination, theme = "Auto Discover" } = req.body || {};
+    const { place: destination, theme = "Auto Discover", action = "SCOUT" } = req.body || {};
 
     if (!destination || !destination.trim()) {
       return res.status(400).json({
