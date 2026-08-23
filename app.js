@@ -61,58 +61,22 @@ async function run(action = "SCOUT") {
       throw new Error(data.error || "API request failed");
     }
 
-    const stories = Array.isArray(data.stories)
-      ? data.stories
-      : Array.isArray(data.results)
-      ? data.results
-      : [];
+    const story = data.result;
 
-    title.textContent = data.title || p;
-    text.textContent =
-      data.summary ||
-      data.intro ||
-      `พบเรื่องราวสำหรับ ${p}`;
+if (!story) {
+  throw new Error(data.error || "AI returned no story");
+}
 
-    if (stories.length) {
-      cards.innerHTML = stories
-        .map((story, index) => {
-          const storyTitle =
-            typeof story === "string"
-              ? `เรื่องที่ ${index + 1}`
-              : story.title || `เรื่องที่ ${index + 1}`;
+title.textContent = data.destination || p;
+score.textContent = "AI";
+text.textContent = story;
 
-          const storyText =
-            typeof story === "string"
-              ? story
-              : story.description ||
-                story.story ||
-                story.text ||
-                "";
-
-          return `
-            <div class="card">
-              <strong>
-                ${String(index + 1).padStart(2, "0")} ·
-                ${escapeHtml(storyTitle)}
-              </strong>
-              <div>${escapeHtml(storyText)}</div>
-            </div>
-          `;
-        })
-        .join("");
-    } else {
-      cards.innerHTML = `
-        <div class="card">
-          <strong>AI Result</strong>
-          <div>${escapeHtml(
-            data.text ||
-            data.content ||
-            data.answer ||
-            "ได้รับคำตอบจาก AI แล้ว"
-          )}</div>
-        </div>
-      `;
-    }
+cards.innerHTML = `
+  <div class="card">
+    <strong>${escapeHtml(data.destination || p)}</strong>
+    <div>${escapeHtml(story)}</div>
+  </div>
+`;
 
     copyBtn.hidden = false;
   } catch (error) {
