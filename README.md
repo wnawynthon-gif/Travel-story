@@ -1,8 +1,8 @@
-# Travel Story Engine v1.2.2
-Fix: OpenAI structured JSON -> exactly 5 Story Cards. No legacy Markdown parsing.
+# Travel Story Engine v1.3
+Stable v1.2.2 card architecture retained.
+Added per-card confidence, Research, Verify, and Sources.
 
-Deploy to Vercel:
-1. Replace repository root files with this package.
-2. Keep `api/discover.js` inside the `api` folder.
-3. Vercel Environment Variables: `OPENAI_API_KEY`; optional `OPENAI_MODEL`.
-4. Redeploy. Test Vienna -> Discover Stories.
+iPad/GitHub update:
+- Upload/replace index.html, app.js, style.css, README.md individually.
+- DO NOT upload the api folder.
+- Open existing api/discover.js in GitHub > Edit > replace all with v1.3 discover.js.

@@ -1,14 +1,6 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Travel Story Engine v1.2.2</title><link rel="stylesheet" href="style.css"></head><body>
-<main><header><div class="eyebrow">TRAVEL STORY ENGINE · v1.2.2</div><h1>Find the story behind the place.</h1>
-<p>AI travel-story scout — structured into usable story cards.</p></header>
-<section class="search"><label>Destination</label><input id="place" autocomplete="off">
-<label>Theme</label><select id="theme"><option>Auto Discover</option><option>History</option><option>Hidden Stories</option><option>Local Life</option><option>Architecture</option><option>Food</option></select>
-<button id="discover">Discover Stories</button></section>
-<section><h3>Workflow</h3><div class="workflow">
-<button data-action="SCOUT">🔎<span>Discover</span></button><button data-action="RESEARCH">📚<span>Research</span></button>
-<button data-action="VERIFY">✓<span>Verify</span></button><button data-action="WRITE">✍️<span>Write</span></button>
-</div></section>
-<section class="result"><div class="result-head"><div><small id="status">READY</small><h2 id="resultTitle">Vienna</h2><p id="intro"></p></div><div class="ai">AI</div></div>
-<div id="cards" class="cards"></div><button id="copyBtn" class="secondary" hidden>Copy stories</button></section>
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Travel Story Engine v1.3</title><link rel="stylesheet" href="style.css"></head><body><main>
+<header><div class="eyebrow">TRAVEL STORY ENGINE · v1.3</div><h1>Find the story behind the place.</h1><p>Discover → Research → Verify → Write.</p></header>
+<section class="search"><label>Destination</label><input id="place"><label>Theme</label><select id="theme"><option>Auto Discover</option><option>History</option><option>Hidden Stories</option><option>Local Life</option><option>Architecture</option><option>Food</option></select><button id="discover">Discover Stories</button></section>
+<section><h3>Workflow</h3><div class="workflow"><button data-action="SCOUT">🔎<span>Discover</span></button><button data-action="RESEARCH">📚<span>Research</span></button><button data-action="VERIFY">✓<span>Verify</span></button><button data-action="WRITE">✍️<span>Write</span></button></div></section>
+<section class="result"><div class="result-head"><div><small id="status">READY</small><h2 id="resultTitle">Vienna</h2><p id="intro"></p></div><div class="ai">AI</div></div><div id="cards" class="cards"></div><button id="copyBtn" class="secondary" hidden>Copy stories</button></section>
 </main><script src="app.js"></script></body></html>
