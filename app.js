@@ -105,4 +105,4 @@ document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>runStage(b.d
 $("#copyWork").onclick=async()=>{await navigator.clipboard.writeText(plainText(workContent));$("#copyWork").textContent="Copied ✓";setTimeout(()=>$("#copyWork").textContent="Copy result",1200)};
 $("#copyAll").onclick=async()=>navigator.clipboard.writeText(plainText(packContent));
 $("#downloadTxt").onclick=()=>{const blob=new Blob([plainText(packContent)],{type:"text/plain;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${(place.value||"travel-story").replace(/\s+/g,"-")}-content-pack.txt`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
-place.value=localStorage.getItem("tse-last-place")||"Vienna";
+place.value="";
