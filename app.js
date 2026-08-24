@@ -136,11 +136,16 @@ $("#copyWork").onclick=async()=>{await navigator.clipboard.writeText(plainText(w
 $("#copyAll").onclick=async()=>navigator.clipboard.writeText(plainText(packContent));
 $("#downloadTxt").onclick=()=>{const blob=new Blob([plainText(packContent)],{type:"text/plain;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${(place.value||"travel-story").replace(/\s+/g,"-")}-content-pack.txt`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
 $("#downloadPdf").onclick=()=>{
-  const oldTitle=document.title;
   document.title=(selected?.title || "Travel Story Content Pack");
   document.body.classList.add("print-pack");
-  window.print();
-  document.body.classList.remove("print-pack");
-  document.title=oldTitle;
+
+  setTimeout(()=>{
+    window.print();
+  },300);
 };
+
+window.addEventListener("afterprint",()=>{
+  document.body.classList.remove("print-pack");
+  document.title="Travel Story Engine";
+});
 place.value="";
