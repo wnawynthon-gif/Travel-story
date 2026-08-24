@@ -88,15 +88,45 @@ async function runStage(action){
 
 function renderFinalPack(content){
   finalPack.hidden=false;
-  packContent.innerHTML=`<div class="pack">
-    <h3>${esc(content.title||selected.title)}</h3>
-    <p><b>Story:</b> ${esc(selected.story)}</p>
-    ${context.verify?`<p><b>Verification:</b> ${esc(context.verify.summary||"")}</p>`:""}
-    ${context.write?`<h4>Article</h4><p>${esc(context.write.opening||"")}</p>${(context.write.paragraphs||[]).map(x=>`<p>${esc(x)}</p>`).join("")}`:""}
-    <h4>Social caption</h4><p>${esc(content.long_caption||"")}</p>
-    <p>${(content.hashtags||[]).map(esc).join(" ")}</p>
+
+  const titleText = content.title || selected?.title || "";
+  const storyText = selected?.story || "";
+  const verificationText = context.verify?.summary || "";
+  const articleOpening = context.write?.opening || "";
+  const articleParagraphs = context.write?.paragraphs || [];
+  const socialCaption = content.long_caption || "";
+  const hashtags = content.hashtags || [];
+
+  packContent.innerHTML = `<div class="pack">
+    <h3>${esc(titleText)}</h3>
+
+    <h4>Story</h4>
+    <p>${esc(storyText)}</p>
+
+    ${verificationText ? `
+      <h4>Verification</h4>
+      <p>${esc(verificationText)}</p>
+    ` : ""}
+
+    ${articleOpening || articleParagraphs.length ? `
+      <h4>Article</h4>
+      ${articleOpening ? `<p>${esc(articleOpening)}</p>` : ""}
+      ${articleParagraphs.map(p=>`<p>${esc(p)}</p>`).join("")}
+    ` : ""}
+
+    <h4>Social caption</h4>
+    <p>${esc(socialCaption)}</p>
+
+    ${hashtags.length ? `
+      <h4>Hashtags</h4>
+      <p>${hashtags.map(esc).join(" ")}</p>
+    ` : ""}
   </div>`;
-  finalPack.scrollIntoView({behavior:"smooth",block:"start"});
+
+  finalPack.scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
 }
 
 function plainText(el){return el.innerText||""}
