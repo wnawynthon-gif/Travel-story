@@ -44,7 +44,8 @@ function selectStory(i){
 }
 
 async function api(action, body){
-  const r=await fetch("/api/discover",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,...body})});
+  const endpoint=action==="ILLUSTRATE"?"/api/illustrate":"/api/discover";
+  const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,...body})});
   const d=await r.json(); if(!r.ok)throw new Error(d.error||"API request failed"); return d;
 }
 
@@ -63,8 +64,13 @@ function renderStage(action,d){
   if(action==="VERIFY") workContent.innerHTML=`<div class="verdict">${esc(d.verdict)} · ${esc(d.confidence)}%</div><p class="lead">${esc(d.summary)}</p><h3>Verified</h3><ul>${(d.verified||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul><h3>Cautions</h3><ul>${(d.cautions||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
   if(action==="WRITE") workContent.innerHTML=`<h3>${esc(d.headline)}</h3><p class="lead">${esc(d.opening)}</p>${(d.paragraphs||[]).map(x=>`<p>${esc(x)}</p>`).join("")}<p><b>Closing:</b> ${esc(d.closing)}</p>`;
   if(action==="VISUAL") workContent.innerHTML=`<p class="lead">${esc(d.visual_direction)}</p><h3>Shot list</h3><ul>${(d.shots||[]).map(x=>`<li><b>${esc(x.shot)}</b> — ${esc(x.direction)}</li>`).join("")}</ul><h3>Caption ideas</h3><ul>${(d.captions||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
-  if(action==="ILLUSTRATE") workContent.innerHTML=`<p class="lead">${esc(d.art_direction)}</p><h3>Illustration prompt</h3><div class="promptbox">${esc(d.image_prompt)}</div><h3>Must include</h3><ul>${(d.must_include||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul><h3>Avoid</h3><ul>${(d.avoid||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
-  if(action==="MAP") workContent.innerHTML=`<p class="lead">${esc(d.map_summary)}</p><ol>${(d.stops||[]).map(x=>`<li><b>${esc(x.name)}</b> — ${esc(x.reason)}<br><small>${esc(x.location)}</small></li>`).join("")}</ol><p><b>Route:</b> ${esc(d.route_note)}</p><a class="maplink" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selected.location)}">Open selected location in Google Maps ↗</a>`;
+  if(action==="ILLUSTRATE") workContent.innerHTML=`<div class="generated-art"><img src="${d.image}" alt="AI illustration for ${esc(selected.title)}"></div><p class="lead">AI-generated editorial illustration for <b>${esc(selected.title)}</b></p><details><summary>Image prompt</summary><div class="promptbox">${esc(d.prompt||"")}</div></details>`;
+  if(action==="MAP"){
+    const stops=(d.stops||[]).slice(0,4);
+    const q=x=>encodeURIComponent(x.location||x.name||"");
+    const route=stops.length===4?`https://www.google.com/maps/dir/?api=1&origin=${q(stops[0])}&destination=${q(stops[3])}&waypoints=${q(stops[1])}%7C${q(stops[2])}&travelmode=walking`:"#";
+    workContent.innerHTML=`<p class="lead">${esc(d.map_summary)}</p><ol class="map-stops">${stops.map((x,i)=>`<li><span class="stop-number">${i+1}</span><div><b>${esc(x.name)}</b> — ${esc(x.reason)}<br><small>${esc(x.location)}</small><br><a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${q(x)}">Open point ${i+1} in Google Maps ↗</a></div></li>`).join("")}</ol><p><b>Route:</b> ${esc(d.route_note)}</p><a class="maplink route-link" target="_blank" rel="noopener" href="${route}">Open route 1 → 2 → 3 → 4 in Google Maps ↗</a>`;
+  }
   if(action==="CONTENT"){
     workContent.innerHTML=`<h3>${esc(d.title)}</h3><p class="lead">${esc(d.short_caption)}</p><h3>Long caption</h3><p>${esc(d.long_caption)}</p><h3>Hashtags</h3><p>${(d.hashtags||[]).map(esc).join(" ")}</p><h3>Reel / Short-video script</h3><ol>${(d.reel_script||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ol>`;
     renderFinalPack(d);

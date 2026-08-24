@@ -1,4 +1,4 @@
-# Travel Story Engine — FINAL
+# Travel Story Engine — v1.4 FINAL
 
 Stable final package built from the working v1.3.x architecture.
 
@@ -39,3 +39,11 @@ Required Vercel environment variable:
 
 Optional:
 `OPENAI_MODEL`
+
+
+## v1.4 FINAL changes
+- Illustrate now generates and displays a real AI image via `/api/illustrate`.
+- Map always returns exactly 4 stops.
+- Each stop has its own Google Maps link.
+- Route button opens Google Maps Directions with points 1 → 2 → 3 → 4.
+- Uses `OPENAI_IMAGE_MODEL` if set, otherwise `gpt-image-2`.
