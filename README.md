@@ -1,4 +1,4 @@
-# Travel Story Engine — v1.4 FINAL
+# Travel Story Engine — v1.5
 
 Stable final package built from the working v1.3.x architecture.
 
@@ -40,6 +40,11 @@ Required Vercel environment variable:
 Optional:
 `OPENAI_MODEL`
 
+
+## v1.5 changes
+
+- New default Signature Illustration Style: watercolor + coloured-pencil travel journal on warm cream paper.
+- Illustration prompts now explicitly avoid photorealistic/cinematic output and preserve location/cultural accuracy.
 
 ## v1.4 FINAL changes
 - Illustrate now generates and displays a real AI image via `/api/illustrate`.
