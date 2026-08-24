@@ -1,1 +1,102 @@
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#f2f3ed;color:#1f2925;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:1080px;margin:auto;padding:28px 18px 90px}.hero{padding:10px 2px 8px}.hero h1{font:clamp(42px,7vw,72px) Georgia,serif;line-height:.98;margin:10px 0 16px}.hero p{font-size:18px;max-width:760px;color:#53605b}.eyebrow,#status,#workStage,.section-title small{letter-spacing:.14em;font-size:12px;font-weight:900;color:#53645d}.panel{background:#fff;border:1px solid #dfe4dc;border-radius:28px;padding:22px;margin:24px 0;box-shadow:0 10px 35px #20382b0c}.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}label{display:block;font-size:13px;font-weight:800;margin:4px 0 7px}input,select{width:100%;padding:16px;border:1px solid #d6ddd6;border-radius:15px;background:#fff;font-size:17px}button{border:0;border-radius:15px;padding:15px;font-weight:850;cursor:pointer}.primary{width:100%;background:#173f32;color:#fff;font-size:17px;margin-top:16px}.section-title,.result-head,.workspace-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}.section-title h2,.result-head h2,.workspace-head h2{font:32px Georgia,serif;margin:5px 0}.selected-label{font-size:12px;background:#e5ebe6;padding:8px 11px;border-radius:999px;max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.selected-label.warn{background:#f4ddcf}.workflow{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}.workflow button{background:#fff;border:1px solid #dde3dc;font-size:21px;min-height:78px}.workflow button:hover{border-color:#173f32}.workflow span{display:block;font-size:12px;margin-top:6px}.ai{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:#173f32;color:#fff;font-weight:900;font-size:20px;flex:none}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:20px}.story-card{background:#f8f9f5;border:2px solid transparent;border-radius:20px;padding:20px;transition:.15s}.story-card.selected{border-color:#173f32;box-shadow:0 0 0 3px #173f3212}.story-top{display:flex;justify-content:space-between}.num{font:28px Georgia,serif}.badge,.confidence{font-size:11px;font-weight:900;padding:6px 9px;border-radius:99px;background:#e6ebe7;margin-left:5px}.legend{background:#eee6dc}.mixed{background:#ece9d8}.story-card h2{font:25px Georgia,serif;margin:12px 0}.hook,.lead{font-weight:760;font-size:17px;line-height:1.55}.story-card p,.workspace p{line-height:1.62}.detail,.sources{border-top:1px solid #dfe4dd;padding-top:10px;margin-top:12px}.detail b,.detail span,.sources b{display:block}.sources a{display:block;margin-top:7px;color:#173f32;word-break:break-word}.select-story{width:100%;margin-top:16px;background:#dfe7e1;color:#173f32}.workspace{border-color:#cbd8ce}.workspace li{margin:8px 0;line-height:1.55}.secondary{background:#e4e9e4;color:#1f2925}.verdict{display:inline-block;background:#173f32;color:#fff;border-radius:999px;padding:8px 12px;font-weight:900}.promptbox{background:#f3f4ef;border-radius:15px;padding:16px;line-height:1.6}.maplink{display:inline-block;margin-top:12px;color:#173f32;font-weight:800}.hint{color:#68736e}.error{color:#a12828}.actions{display:flex;gap:8px}.final-pack{border:2px solid #173f32}.busy button{opacity:.72;pointer-events:none}@media(max-width:800px){.workflow{grid-template-columns:repeat(4,1fr)}.cards{grid-template-columns:1fr}}@media(max-width:560px){main{padding:18px 12px 70px}.panel{padding:16px;border-radius:22px}.grid2{grid-template-columns:1fr}.workflow{grid-template-columns:repeat(2,1fr)}.section-title,.workspace-head{display:block}.selected-label{display:inline-block;max-width:100%;margin-top:8px}.result-head h2{font-size:28px}.ai{width:54px;height:54px}.actions{margin-top:10px}}.generated-art{margin:4px 0 18px;border-radius:20px;overflow:hidden;background:#e8ece7;aspect-ratio:3/2}.generated-art img{display:block;width:100%;height:100%;object-fit:cover}.map-stops{list-style:none;padding:0}.map-stops li{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #dfe4dd}.stop-number{width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;background:#173f32;color:white;font-weight:900}.map-stops a{color:#173f32;font-weight:750}.route-link{background:#173f32;color:#fff;padding:13px 16px;border-radius:14px;text-decoration:none}details{margin-top:12px}summary{cursor:pointer;font-weight:800}
+
+
+/* ===== PDF / PRINT MODE ===== */
+
+@page {
+  size: A4 portrait;
+  margin: 15mm;
+}
+
+@media print {
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.print-pack > * {
+    display: none !important;
+  }
+
+  body.print-pack main {
+    display: block !important;
+  }
+
+  body.print-pack main > * {
+    display: none !important;
+  }
+
+  body.print-pack #finalPack {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  body.print-pack #finalPack[hidden] {
+    display: block !important;
+  }
+
+  body.print-pack #finalPack .workspace-head {
+    display: block !important;
+    margin-bottom: 10mm !important;
+  }
+
+  body.print-pack #finalPack .actions {
+    display: none !important;
+  }
+
+  body.print-pack #packContent {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+  }
+
+  body.print-pack #packContent .pack {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  body.print-pack #packContent h3 {
+    font-size: 20pt !important;
+    line-height: 1.3 !important;
+    margin: 0 0 8mm !important;
+    break-after: avoid;
+  }
+
+  body.print-pack #packContent h4 {
+    font-size: 13pt !important;
+    line-height: 1.4 !important;
+    margin: 7mm 0 3mm !important;
+    break-after: avoid;
+  }
+
+  body.print-pack #packContent p {
+    font-size: 11pt !important;
+    line-height: 1.65 !important;
+    margin: 0 0 4mm !important;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    orphans: 3;
+    widows: 3;
+  }
+
+  body.print-pack small {
+    color: #000 !important;
+  }
+
+  button {
+    display: none !important;
+  }
+}
