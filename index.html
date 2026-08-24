@@ -1,6 +1,80 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Travel Story Engine v1.3</title><link rel="stylesheet" href="style.css"></head><body><main>
-<header><div class="eyebrow">TRAVEL STORY ENGINE · v1.3</div><h1>Find the story behind the place.</h1><p>Discover → Research → Verify → Write.</p></header>
-<section class="search"><label>Destination</label><input id="place"><label>Theme</label><select id="theme"><option>Auto Discover</option><option>History</option><option>Hidden Stories</option><option>Local Life</option><option>Architecture</option><option>Food</option></select><button id="discover">Discover Stories</button></section>
-<section><h3>Workflow</h3><div class="workflow"><button data-action="SCOUT">🔎<span>Discover</span></button><button data-action="RESEARCH">📚<span>Research</span></button><button data-action="VERIFY">✓<span>Verify</span></button><button data-action="WRITE">✍️<span>Write</span></button></div></section>
-<section class="result"><div class="result-head"><div><small id="status">READY</small><h2 id="resultTitle">Vienna</h2><p id="intro"></p></div><div class="ai">AI</div></div><div id="cards" class="cards"></div><button id="copyBtn" class="secondary" hidden>Copy stories</button></section>
-</main><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#173f32">
+  <title>Travel Story Engine — Final</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div class="eyebrow">TRAVEL STORY ENGINE · FINAL</div>
+    <h1>Find the story behind the place.</h1>
+    <p>ค้นหา → วิจัย → ตรวจสอบ → เขียน → วางภาพ → Illustration → Map → Content Pack</p>
+  </header>
+
+  <section class="panel search">
+    <div class="grid2">
+      <div>
+        <label for="place">Destination</label>
+        <input id="place" placeholder="Vienna, Kyoto, York..." autocomplete="off">
+      </div>
+      <div>
+        <label for="theme">Theme</label>
+        <select id="theme">
+          <option>Auto Discover</option><option>History</option><option>Hidden Stories</option>
+          <option>Local Life</option><option>Architecture</option><option>Food</option><option>Culture</option>
+        </select>
+      </div>
+    </div>
+    <button id="discover" class="primary">Discover 5 Stories</button>
+  </section>
+
+  <section>
+    <div class="section-title">
+      <div><small>WORKFLOW</small><h2>เลือก Story Card แล้วทำต่อ</h2></div>
+      <span id="selectedLabel" class="selected-label">ยังไม่ได้เลือกเรื่อง</span>
+    </div>
+    <div class="workflow">
+      <button data-action="RESEARCH">📚<span>Research</span></button>
+      <button data-action="VERIFY">✓<span>Verify</span></button>
+      <button data-action="WRITE">✍️<span>Write</span></button>
+      <button data-action="VISUAL">🎬<span>Visual</span></button>
+      <button data-action="ILLUSTRATE">🎨<span>Illustrate</span></button>
+      <button data-action="MAP">📍<span>Map</span></button>
+      <button data-action="CONTENT">📦<span>Content Pack</span></button>
+    </div>
+  </section>
+
+  <section class="panel result">
+    <div class="result-head">
+      <div><small id="status">READY</small><h2 id="resultTitle">เริ่มจากชื่อเมือง</h2><p id="intro"></p></div>
+      <div class="ai">AI</div>
+    </div>
+    <div id="cards" class="cards"></div>
+  </section>
+
+  <section id="workspace" class="panel workspace" hidden>
+    <div class="workspace-head">
+      <div><small id="workStage">WORKSPACE</small><h2 id="workTitle">Selected Story</h2></div>
+      <button id="copyWork" class="secondary">Copy result</button>
+    </div>
+    <div id="workContent"></div>
+  </section>
+
+  <section id="finalPack" class="panel final-pack" hidden>
+    <div class="workspace-head">
+      <div><small>FINAL OUTPUT</small><h2>Travel Story Content Pack</h2></div>
+      <div class="actions">
+        <button id="copyAll" class="secondary">Copy all</button>
+        <button id="downloadTxt" class="secondary">Save .txt</button>
+      </div>
+    </div>
+    <div id="packContent"></div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
