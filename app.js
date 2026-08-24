@@ -135,17 +135,103 @@ document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>runStage(b.d
 $("#copyWork").onclick=async()=>{await navigator.clipboard.writeText(plainText(workContent));$("#copyWork").textContent="Copied ✓";setTimeout(()=>$("#copyWork").textContent="Copy result",1200)};
 $("#copyAll").onclick=async()=>navigator.clipboard.writeText(plainText(packContent));
 $("#downloadTxt").onclick=()=>{const blob=new Blob([plainText(packContent)],{type:"text/plain;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${(place.value||"travel-story").replace(/\s+/g,"-")}-content-pack.txt`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
-$("#downloadPdf").onclick=()=>{
-  document.title=(selected?.title || "Travel Story Content Pack");
-  document.body.classList.add("print-pack");
+$("#downloadPdf").onclick = () => {
+  const content = document.querySelector("#finalPack");
 
-  setTimeout(()=>{
+  if (!content) {
+    alert("No content available");
+    return;
+  }
+
+  const printWindow = window.open("", "_blank");
+
+  if (!printWindow) {
+    alert("Please allow pop-ups to create PDF");
+    return;
+  }
+
+  printWindow.document.open();
+
+  printWindow.document.write(`
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${selected?.title || "Travel Story Content Pack"}</title>
+
+<style>
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: #111;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont,
+    "Noto Sans Thai", "Thonburi", Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.55;
+}
+
+#finalPack {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: #fff !important;
+}
+
+#finalPack[hidden] {
+  display: block !important;
+}
+
+.actions {
+  display: none !important;
+}
+
+h1, h2, h3, h4 {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+p {
+  orphans: 3;
+  widows: 3;
+}
+</style>
+</head>
+
+<body>
+${content.outerHTML}
+
+<script>
+window.onload = function () {
+  setTimeout(function () {
     window.print();
-  },300);
+  }, 500);
+};
+<\/script>
+
+</body>
+</html>
+  `);
+
+  printWindow.document.close();
 };
 
-window.addEventListener("afterprint",()=>{
-  document.body.classList.remove("print-pack");
-  document.title="Travel Story Engine";
-});
+
 place.value="";
