@@ -101,22 +101,28 @@
   }
 
   /* ===== PDF / PRINT: FINAL PACK ONLY ===== */
+
 @media print {
+
   @page {
     size: A4 portrait;
     margin: 12mm;
   }
 
-  body.print-pack main > * {
-    display: none !important;
+  body.print-pack * {
+    visibility: hidden !important;
   }
 
-  body.print-pack main > #finalPack {
-    display: block !important;
+  body.print-pack #finalPack,
+  body.print-pack #finalPack * {
+    visibility: visible !important;
   }
 
   body.print-pack #finalPack {
-    position: static !important;
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
     width: 100% !important;
     max-width: none !important;
     margin: 0 !important;
@@ -130,13 +136,8 @@
     display: none !important;
   }
 
-  body.print-pack #finalPack[hidden] {
-    display: block !important;
-  }
-
   body.print-pack #packContent {
     display: block !important;
   }
-}
-}
 
+}
