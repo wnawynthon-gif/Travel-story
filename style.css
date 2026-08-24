@@ -16,3 +16,21 @@ button{border:0;font:inherit;cursor:pointer}.primary{width:100%;padding:16px;bor
 .secondary{width:100%;padding:13px;border-radius:14px;background:#e3e8df;color:#263a30;font-weight:800;margin-top:12px}
 footer{text-align:center;font-size:11px;color:#7c867f;padding:10px}
 @media(min-width:600px){.grid{grid-template-columns:repeat(4,1fr)}h1{font-size:52px}}
+.story-card{margin-top:14px;padding:18px;border:1px solid rgba(31,42,36,.12);border-radius:18px;background:rgba(255,255,255,.62)}
+.story-card.top-story{border-width:2px;background:rgba(246,241,231,.9)}
+.story-card h3{font-family:Georgia,serif;font-size:22px;margin:8px 0 8px;line-height:1.15}
+.story-card p{margin:7px 0}.story-hook{font-weight:750;color:#263a30}
+.story-meta{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:850;letter-spacing:.05em;color:#69756e}
+.top-badge,.fact-badge{padding:4px 7px;border-radius:999px;background:#263a30;color:#fff}.fact-badge{margin-left:auto;background:#e3e8df;color:#35433b}
+.story-detail{display:grid;grid-template-columns:130px 1fr;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #e1e4de;font-size:13px;line-height:1.45}.story-detail b{color:#35433b}.story-detail span{color:#59645e}
+.loading-card{display:flex;align-items:center;gap:12px;padding:18px 0;color:#69756e;font-size:13px}.spinner{width:18px;height:18px;border:2px solid #d7ddd6;border-top-color:#263a30;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:480px){.story-detail{grid-template-columns:1fr;gap:3px}.story-card{padding:15px}.story-card h3{font-size:20px}}
+
+/* v1.2 interactive workflow */
+.story-card{cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.story-card:hover{transform:translateY(-2px)}
+.story-card.selected{border:2px solid #1f5b49;box-shadow:0 10px 28px rgba(31,91,73,.14)}
+.story-card .select-hint{margin-top:12px;font-size:.78rem;opacity:.58}
+.workflow-note{margin:10px 0 0;font-size:.88rem;opacity:.7}
+.map-link{display:inline-block;margin-top:8px;font-weight:700;color:#1f5b49;text-decoration:none}
+.action-state{display:inline-flex;align-items:center;gap:6px;margin-left:8px;font-size:.78rem;opacity:.7}

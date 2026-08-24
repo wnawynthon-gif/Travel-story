@@ -15,7 +15,7 @@
 <body>
   <main class="app">
     <header>
-      <div class="eyebrow">TRAVEL STORY ENGINE · v1.0</div>
+      <div class="eyebrow">TRAVEL STORY ENGINE · v1.2</div>
       <h1>Discover the story<br>behind every place.</h1>
       <p>หาเรื่องที่คนส่วนใหญ่ไม่รู้ → Research → Verify → Write → Visual → Content Pack</p>
     </header>
@@ -49,6 +49,7 @@
         <button data-action="MAP">🗺️<span>Map</span></button>
         <button data-action="PACK">📦<span>Content Pack</span></button>
       </div>
+      <p class="workflow-note" id="workflowNote">Discover ก่อน แล้วแตะ Story Card ที่ต้องการพัฒนาต่อ</p>
     </section>
 
     <section class="result" id="result" aria-live="polite">
@@ -59,12 +60,12 @@
         </div>
         <span class="score" id="score">TSE</span>
       </div>
-      <p id="resultText">พิมพ์สถานที่ด้านบน แล้วกด Discover Stories แอป v1.0 จะสร้างคำสั่ง workflow และเก็บรายการล่าสุดไว้บนเครื่องนี้</p>
+      <p id="resultText">พิมพ์สถานที่ด้านบน แล้วกด Discover Stories แอป v1.2 จะค้นหา 5 เรื่อง เลือก Story Card แล้วพัฒนาต่อผ่าน Research → Verify → Write → Visual → Map → Content Pack</p>
       <div id="storyCards"></div>
-      <button class="secondary" id="copyBtn" hidden>Copy TSE Command</button>
+      <button class="secondary" id="copyBtn" hidden>Copy Story Pack</button>
     </section>
 
-    <footer>Starter PWA · Mobile-first · พร้อมต่อ AI/Search/Image API ในขั้นถัดไป</footer>
+    <footer>Travel Story Engine v1.2 · Connected Story Workflow · Mobile-first</footer>
   </main>
   <script src="app.js"></script>
 </body>
