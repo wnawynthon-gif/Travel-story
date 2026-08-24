@@ -1,4 +1,4 @@
-# Travel Story Engine — v1.5
+# Travel Story Engine — v1.6
 
 Stable final package built from the working v1.3.x architecture.
 
@@ -41,7 +41,7 @@ Optional:
 `OPENAI_MODEL`
 
 
-## v1.5 changes
+## v1.6 changes
 
 - New default Signature Illustration Style: watercolor + coloured-pencil travel journal on warm cream paper.
 - Illustration prompts now explicitly avoid photorealistic/cinematic output and preserve location/cultural accuracy.
