@@ -1,4 +1,4 @@
-# Travel Story Engine — v1.6
+# Travel Story Engine — v1.8
 
 Stable final package built from the working v1.3.x architecture.
 
@@ -40,6 +40,13 @@ Required Vercel environment variable:
 Optional:
 `OPENAI_MODEL`
 
+
+## v1.8 changes
+- App-visible version updated to v1.8.
+- Content Pack generation split into two smaller parallel AI jobs to reduce timeout risk.
+- Content Pack now shows live progress and retries a failed sub-job once.
+- Preserves the approved cheerful watercolor + coloured-pencil travel-journal illustration style.
+- Cache bumped to v1.8 so iPad/PWA does not keep old app.js/style.css.
 
 ## v1.6 changes
 

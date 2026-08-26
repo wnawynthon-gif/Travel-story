@@ -43,10 +43,24 @@ function selectStory(i){
   workspace.scrollIntoView({behavior:"smooth",block:"start"});
 }
 
-async function api(action, body){
+async function api(action, body, retry=true){
   const endpoint=action==="ILLUSTRATE"?"/api/illustrate":"/api/discover";
-  const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,...body})});
-  const d=await r.json(); if(!r.ok)throw new Error(d.error||"API request failed"); return d;
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),55000);
+  try{
+    const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,...body}),signal:controller.signal});
+    const text=await r.text();
+    let d={}; try{d=text?JSON.parse(text):{}}catch{throw new Error(`Server returned invalid response (${r.status})`)}
+    if(!r.ok)throw new Error(d.error||`API request failed (${r.status})`);
+    return d;
+  }catch(e){
+    if(retry && action.startsWith("CONTENT_")){
+      await new Promise(resolve=>setTimeout(resolve,900));
+      return api(action,body,false);
+    }
+    if(e.name==="AbortError")throw new Error("AI ใช้เวลานานเกินไป กรุณากด Content Pack อีกครั้ง");
+    throw e;
+  }finally{clearTimeout(timer)}
 }
 
 async function discover(){
@@ -81,9 +95,17 @@ async function runStage(action){
   if(!selected){selectedLabel.textContent="เลือก Story Card ก่อน";selectedLabel.classList.add("warn");setTimeout(()=>selectedLabel.classList.remove("warn"),1500);return}
   busy(`AI · ${action}…`); workspace.hidden=false; workStage.textContent=action; workContent.innerHTML="<p>กำลังทำงานกับ Story Card ที่เลือก…</p>";
   try{
-    const d=await api(action,{place:place.value.trim(),theme:theme.value,story:selected,context});
+    let d;
+    if(action==="CONTENT"){
+      workContent.innerHTML="<p>กำลังสร้าง Content Pack… <b>Social + Reel</b> ทำพร้อมกันเพื่อลดเวลารอ</p>";
+      const payload={place:place.value.trim(),theme:theme.value,story:selected,context};
+      const [social,reel]=await Promise.all([api("CONTENT_SOCIAL",payload),api("CONTENT_REEL",payload)]);
+      d={...social,...reel};
+    }else{
+      d=await api(action,{place:place.value.trim(),theme:theme.value,story:selected,context});
+    }
     context[action.toLowerCase()]=d; renderStage(action,d); status.textContent=`DONE · ${action}`;
-  }catch(e){workContent.innerHTML=`<p class="error">ไม่สำเร็จ: ${esc(e.message)}</p>`;status.textContent="ERROR"}finally{done()}
+  }catch(e){workContent.innerHTML=`<p class="error">ไม่สำเร็จ: ${esc(e.message)}</p><p class="hint">ข้อมูลขั้นก่อนหน้ายังอยู่ ไม่ต้องเริ่ม Discover ใหม่</p>`;status.textContent="ERROR"}finally{done()}
 }
 
 function renderFinalPack(content){
