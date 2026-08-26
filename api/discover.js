@@ -13,7 +13,8 @@ const WRITE_SCHEMA={type:"object",additionalProperties:false,properties:{headlin
 const VISUAL_SCHEMA={type:"object",additionalProperties:false,properties:{visual_direction:{type:"string"},shots:{type:"array",minItems:3,maxItems:6,items:{type:"object",additionalProperties:false,properties:{shot:{type:"string"},direction:{type:"string"}},required:["shot","direction"]}},captions:{type:"array",minItems:2,maxItems:4,items:{type:"string"}}},required:["visual_direction","shots","captions"]};
 const ILLUSTRATE_SCHEMA={type:"object",additionalProperties:false,properties:{art_direction:{type:"string"},image_prompt:{type:"string"},must_include:{type:"array",minItems:2,maxItems:6,items:{type:"string"}},avoid:{type:"array",minItems:1,maxItems:5,items:{type:"string"}}},required:["art_direction","image_prompt","must_include","avoid"]};
 const MAP_SCHEMA={type:"object",additionalProperties:false,properties:{map_summary:{type:"string"},stops:{type:"array",minItems:4,maxItems:4,items:{type:"object",additionalProperties:false,properties:{name:{type:"string"},location:{type:"string"},reason:{type:"string"}},required:["name","location","reason"]}},route_note:{type:"string"}},required:["map_summary","stops","route_note"]};
-const CONTENT_SCHEMA={type:"object",additionalProperties:false,properties:{title:{type:"string"},short_caption:{type:"string"},long_caption:{type:"string"},hashtags:{type:"array",minItems:5,maxItems:12,items:{type:"string"}},reel_script:{type:"array",minItems:3,maxItems:6,items:{type:"string"}}},required:["title","short_caption","long_caption","hashtags","reel_script"]};
+const CONTENT_SOCIAL_SCHEMA={type:"object",additionalProperties:false,properties:{title:{type:"string"},short_caption:{type:"string"},long_caption:{type:"string"},hashtags:{type:"array",minItems:5,maxItems:12,items:{type:"string"}}},required:["title","short_caption","long_caption","hashtags"]};
+const CONTENT_REEL_SCHEMA={type:"object",additionalProperties:false,properties:{reel_script:{type:"array",minItems:3,maxItems:6,items:{type:"string"}}},required:["reel_script"]};
 
 function outputText(d){if(typeof d?.output_text==="string")return d.output_text;for(const o of d?.output||[])for(const c of o?.content||[])if(c?.type==="output_text")return c.text||"";return""}
 async function ask(prompt,schema,name){
@@ -43,7 +44,19 @@ Never present folklore as established fact. No markdown.`;
   if(action==="WRITE")return res.status(200).json(await ask(`${base} Research: ${JSON.stringify(context.research||{})}. Verification: ${JSON.stringify(context.verify||{})}. Write an engaging polished travel story in Thai with headline, opening, 3-7 paragraphs and closing. Keep all caveats from verification. No markdown.`,WRITE_SCHEMA,"travel_write_final"));
   if(action==="VISUAL")return res.status(200).json(await ask(`${base} Create a practical photography/video visual direction with 3-6 shots and 2-4 caption ideas. Do not invent access facts. No markdown.`,VISUAL_SCHEMA,"travel_visual_final"));
     if(action==="MAP")return res.status(200).json(await ask(`${base} Create a practical walking/sightseeing route with exactly 4 distinct real stops, numbered in natural travel order. Each stop must have a Google-Maps-searchable place/location string and a short story reason. Use only real places relevant to the selected story and destination. Never invent coordinates or addresses. No markdown.`,MAP_SCHEMA,"travel_map_final"));
-  if(action==="CONTENT")return res.status(200).json(await ask(`${base} Research: ${JSON.stringify(context.research||{})}. Verification: ${JSON.stringify(context.verify||{})}. Written story: ${JSON.stringify(context.write||{})}. Produce a ready-to-publish Thai content pack: short caption, long caption, hashtags and short-video/reel script. Preserve factual caveats. No markdown.`,CONTENT_SCHEMA,"travel_content_final"));
+  // v1.8: Content Pack is intentionally split into two smaller jobs.
+  // The browser runs these in parallel, avoiding one oversized generation that can hit serverless time limits.
+  const contentBase=`${base} Verified summary: ${JSON.stringify(context.verify?.summary||"")}. Written headline: ${JSON.stringify(context.write?.headline||story.title||"")}. Written opening: ${JSON.stringify(context.write?.opening||story.hook||"")}. Preserve factual caveats. Be concise. No markdown.`;
+  if(action==="CONTENT_SOCIAL")return res.status(200).json(await ask(`${contentBase} Produce ready-to-publish Thai social content: title, short caption, long caption and 5-12 useful hashtags.`,CONTENT_SOCIAL_SCHEMA,"travel_content_social_v18"));
+  if(action==="CONTENT_REEL")return res.status(200).json(await ask(`${contentBase} Produce only a practical 3-6 beat Thai Reel / short-video script.`,CONTENT_REEL_SCHEMA,"travel_content_reel_v18"));
+  // Backward-compatible endpoint for older cached clients.
+  if(action==="CONTENT") {
+    const [social,reel]=await Promise.all([
+      ask(`${contentBase} Produce ready-to-publish Thai social content: title, short caption, long caption and 5-12 useful hashtags.`,CONTENT_SOCIAL_SCHEMA,"travel_content_social_v18"),
+      ask(`${contentBase} Produce only a practical 3-6 beat Thai Reel / short-video script.`,CONTENT_REEL_SCHEMA,"travel_content_reel_v18")
+    ]);
+    return res.status(200).json({...social,...reel});
+  }
   return res.status(400).json({error:"Unknown workflow action"});
  }catch(e){console.error(e);return res.status(500).json({error:e?.message||"Travel Story Engine failed"})}
 }
