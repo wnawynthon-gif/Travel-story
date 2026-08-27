@@ -16,13 +16,11 @@ function renderStories(d){
   selectedLabel.textContent="ยังไม่ได้เลือกเรื่อง";
   cards.innerHTML=storySet.map((s,i)=>`<article class="story-card" data-i="${i}" tabindex="0">
     <div class="story-top"><span class="num">${String(i+1).padStart(2,"0")}</span>
-      <div><span class="badge ${esc((s.type||"FACT").toLowerCase())}">${esc(s.type)}</span><span class="confidence">${esc(s.confidence)}%</span></div>
+      <div><span class="badge ${esc((s.type||"FACT").toLowerCase())}">${esc(s.type)}</span></div>
     </div>
-    <h2>${esc(s.title)}</h2><p class="hook">${esc(s.hook)}</p><p>${esc(s.story)}</p>
-    <div class="detail"><b>Why it matters</b><span>${esc(s.why_it_matters)}</span></div>
+    <h2>${esc(s.title)}</h2><p class="hook">${esc(s.hook)}</p>
     <div class="detail"><b>📍 Location</b><span>${esc(s.location)}</span></div>
-    <div class="detail"><b>📷 Photo idea</b><span>${esc(s.photo_idea)}</span></div>
-    <div class="sources"><b>Sources</b>${(s.sources||[]).map(a=>`<a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.name)} ↗</a>`).join("")}</div>
+    <p class="hint">เลือกเรื่องนี้แล้ว Research จะค้นรายละเอียด ตรวจสอบข้อเท็จจริง และ Sources เฉพาะเรื่องที่เลือก</p>
     <button class="select-story" type="button">Select this story</button>
   </article>`).join("");
   document.querySelectorAll(".story-card").forEach(el=>{
@@ -38,7 +36,7 @@ function selectStory(i){
   document.querySelectorAll(".story-card").forEach((x,n)=>x.classList.toggle("selected",n===i));
   selectedLabel.textContent=`SELECTED · ${selected.title}`;
   workspace.hidden=false; workStage.textContent="SELECTED STORY"; workTitle.textContent=selected.title;
-  workContent.innerHTML=`<p class="lead">${esc(selected.hook)}</p><p>${esc(selected.story)}</p>
+  workContent.innerHTML=`<p class="lead">${esc(selected.hook)}</p>
   <p><b>📍 ${esc(selected.location)}</b></p><p class="hint">ต่อด้วย Research → Verify → Write หรือเลือกขั้นอื่นได้</p>`;
   workspace.scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -46,7 +44,7 @@ function selectStory(i){
 async function api(action, body, retry=true){
   const endpoint=action==="ILLUSTRATE"?"/api/illustrate":"/api/discover";
   const policy={
-    SCOUT:{timeout:58000,retry:false,label:"การค้นหาเรื่องราวใช้เวลานานเกินไป กรุณากด Discover 5 Stories อีกครั้ง"},
+    SCOUT:{timeout:35000,retry:true,label:"การค้นหาเรื่องราวใช้เวลานานเกินไป ระบบลองแบบ Lightweight แล้ว กรุณาลองอีกครั้ง"},
     RESEARCH:{timeout:55000,retry:false,label:"การ Research ใช้เวลานานเกินไป กรุณาลอง Research อีกครั้ง"},
     VERIFY:{timeout:55000,retry:false,label:"การ Verify ใช้เวลานานเกินไป กรุณาลอง Verify อีกครั้ง"},
     WRITE:{timeout:55000,retry:false,label:"การเขียนเรื่องใช้เวลานานเกินไป กรุณาลอง Write อีกครั้ง"},
