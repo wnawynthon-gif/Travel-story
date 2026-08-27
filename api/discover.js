@@ -1,7 +1,7 @@
 const SCOUT_SCHEMA={type:"object",additionalProperties:false,properties:{
 destination:{type:"string"},theme:{type:"string"},intro:{type:"string"},
 stories:{type:"array",minItems:5,maxItems:5,items:{type:"object",additionalProperties:false,properties:{
-title:{type:"string"},type:{type:"string",enum:["FACT","MIXED","LEGEND"]},confidence:{type:"integer",minimum:0,maximum:100},
+title:{type:"string"},type:{type:"string",enum:["FACT","HISTORY","TRUE_STORY","LEGEND","FOLKLORE","MIXED","DISPUTED"]},confidence:{type:"integer",minimum:0,maximum:100},
 hook:{type:"string"},story:{type:"string"},why_it_matters:{type:"string"},location:{type:"string"},photo_idea:{type:"string"},
 sources:{type:"array",minItems:1,maxItems:3,items:{type:"object",additionalProperties:false,properties:{name:{type:"string"},url:{type:"string"}},required:["name","url"]}}
 },required:["title","type","confidence","hook","story","why_it_matters","location","photo_idea","sources"]}}
@@ -42,11 +42,13 @@ export default async function handler(req,res){
   if(!process.env.OPENAI_API_KEY)return res.status(500).json({error:"OPENAI_API_KEY is not configured"});
   if(action==="SCOUT"){
    const p=`Travel Story Engine FINAL. Destination: ${place.trim()}. Theme: ${theme||"Auto Discover"}.
-Create exactly five distinct, traveller-useful stories in Thai. Keep proper place names in common local/English spelling.
-Classify FACT/MIXED/LEGEND and confidence 0-100. Include hook, grounded story, why it matters, specific location, photo idea and 1-3 useful public source URLs.
-Prefer official tourism, museum, government, UNESCO, university, encyclopedia or established cultural institutions. Do not invent URLs; use an authoritative root URL when uncertain.
-Never present folklore as established fact. No markdown.`;
-   return res.status(200).json(await ask(p,SCOUT_SCHEMA,"travel_story_v193",{fast:true,timeout:52000}));
+Create exactly five distinct, traveller-useful STORY ideas in Thai. This is a story-discovery engine, not a generic top-attractions list. Keep proper place names in common local/English spelling.
+Prioritize famous stories behind the destination: major true events, celebrated historical episodes or people, well-known local legends/folklore, origins of iconic food/culture/symbols, and surprising hidden stories. Aim for variety across the five cards; when credible material exists, include at least one TRUE_STORY or HISTORY and at least one LEGEND or FOLKLORE. Do not force a category if the destination has no credible example.
+Classify each as FACT, HISTORY, TRUE_STORY, LEGEND, FOLKLORE, MIXED, or DISPUTED and give confidence 0-100. For legends and folklore, explicitly describe them as a legend/tradition rather than fact. For disputed stories, state what is disputed.
+Each card must have a strong narrative hook, grounded story, why it matters to a traveller today, a specific visitable location when relevant, photo idea, and 1-3 useful public source URLs.
+Prefer official tourism, museums, government, UNESCO, universities, encyclopedias, archives or established cultural institutions. Do not invent URLs; use an authoritative root URL when uncertain.
+Avoid five ordinary attraction descriptions. Prefer stories people would want to retell after the trip. Never present folklore as established fact. No markdown.`;
+   return res.status(200).json(await ask(p,SCOUT_SCHEMA,"travel_story_v194",{fast:true,timeout:52000}));
   }
   if(!story)return res.status(400).json({error:"Select a story first"});
   const base=`Destination: ${place}. Selected story: ${JSON.stringify(story)}. Work only on this selected story. Write in Thai. Preserve proper nouns. Never turn uncertain claims into facts.`;
