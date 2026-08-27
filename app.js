@@ -46,7 +46,7 @@ function selectStory(i){
 async function api(action, body, retry=true){
   const endpoint=action==="ILLUSTRATE"?"/api/illustrate":"/api/discover";
   const policy={
-    SCOUT:{timeout:50000,retry:false,label:"การค้นหาเรื่องราวใช้เวลานานเกินไป กรุณากด Discover 5 Stories อีกครั้ง"},
+    SCOUT:{timeout:58000,retry:false,label:"การค้นหาเรื่องราวใช้เวลานานเกินไป กรุณากด Discover 5 Stories อีกครั้ง"},
     RESEARCH:{timeout:55000,retry:false,label:"การ Research ใช้เวลานานเกินไป กรุณาลอง Research อีกครั้ง"},
     VERIFY:{timeout:55000,retry:false,label:"การ Verify ใช้เวลานานเกินไป กรุณาลอง Verify อีกครั้ง"},
     WRITE:{timeout:55000,retry:false,label:"การเขียนเรื่องใช้เวลานานเกินไป กรุณาลอง Write อีกครั้ง"},
