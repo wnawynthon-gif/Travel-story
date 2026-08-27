@@ -48,6 +48,7 @@ async function api(action, body, retry=true){
     RESEARCH:{timeout:55000,retry:false,label:"การ Research ใช้เวลานานเกินไป กรุณาลอง Research อีกครั้ง"},
     VERIFY:{timeout:55000,retry:false,label:"การ Verify ใช้เวลานานเกินไป กรุณาลอง Verify อีกครั้ง"},
     WRITE:{timeout:55000,retry:false,label:"การเขียนเรื่องใช้เวลานานเกินไป กรุณาลอง Write อีกครั้ง"},
+    VIDEO:{timeout:65000,retry:true,label:"การสร้าง AI Video Pack ใช้เวลานานเกินไป กรุณาลองอีกครั้ง"},
     VISUAL:{timeout:55000,retry:false,label:"การวางภาพใช้เวลานานเกินไป กรุณาลอง Visual อีกครั้ง"},
     MAP:{timeout:55000,retry:false,label:"การสร้าง Map ใช้เวลานานเกินไป กรุณาลอง Map อีกครั้ง"},
     ILLUSTRATE:{timeout:90000,retry:true,label:"การสร้าง Illustration ใช้เวลานานเกินไป กรุณาลอง Illustration อีกครั้ง"},
@@ -87,6 +88,8 @@ function renderStage(action,d){
   if(action==="VERIFY") workContent.innerHTML=`<div class="verdict">${esc(d.verdict)} · ${esc(d.confidence)}%</div><p class="lead">${esc(d.summary)}</p><h3>Verified</h3><ul>${(d.verified||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul><h3>Cautions</h3><ul>${(d.cautions||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
   if(action==="WRITE") workContent.innerHTML=`<h3>${esc(d.headline)}</h3><p class="lead">${esc(d.opening)}</p>${(d.paragraphs||[]).map(x=>`<p>${esc(x)}</p>`).join("")}<p><b>Closing:</b> ${esc(d.closing)}</p>`;
   if(action==="VISUAL") workContent.innerHTML=`<p class="lead">${esc(d.visual_direction)}</p><h3>Shot list</h3><ul>${(d.shots||[]).map(x=>`<li><b>${esc(x.shot)}</b> — ${esc(x.direction)}</li>`).join("")}</ul><h3>Caption ideas</h3><ul>${(d.captions||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
+  if(action==="VIDEO") workContent.innerHTML=`<span class="mood-chip">${esc(d.format)} · ${esc(d.total_duration)}</span><p class="lead">${esc(d.mood)}</p><h3>Scenes</h3>${(d.scenes||[]).map((x,i)=>`<div class="video-scene"><b>${i+1}. ${esc(x.scene)} · ${esc(x.duration)}</b><p>${esc(x.visual)}</p><p><b>Camera:</b> ${esc(x.camera)}</p><div class="video-prompt"><b>AI video prompt</b><br>${esc(x.video_prompt)}</div><p><b>On-screen:</b> ${esc(x.on_screen_text)}</p></div>`).join("")}<h3>Thai voice-over</h3><p>${esc(d.voiceover)}</p><h3>Music / sound</h3><p>${esc(d.music_direction)}</p><button id="copyVideoPrompt" class="secondary">Copy Video Prompt</button>`;
+  if(action==="VIDEO") setTimeout(()=>{const b=$("#copyVideoPrompt");if(b)b.onclick=()=>navigator.clipboard.writeText((d.scenes||[]).map((x,i)=>`Scene ${i+1} (${x.duration})\n${x.video_prompt}`).join("\n\n"))},0);
   if(action==="ILLUSTRATE") workContent.innerHTML=`<div class="generated-art"><img src="${d.image}" alt="AI illustration for ${esc(selected.title)}"></div><p class="lead">AI-generated editorial illustration for <b>${esc(selected.title)}</b></p><details><summary>Image prompt</summary><div class="promptbox">${esc(d.prompt||"")}</div></details>`;
   if(action==="MAP"){
     const stops=(d.stops||[]).slice(0,4);
@@ -144,6 +147,8 @@ function renderFinalPack(content){
       ${articleOpening ? `<p>${esc(articleOpening)}</p>` : ""}
       ${articleParagraphs.map(p=>`<p>${esc(p)}</p>`).join("")}
     ` : ""}
+
+    ${context.video ? `<h4>AI Video Pack</h4><p><b>${esc(context.video.format||"")} · ${esc(context.video.total_duration||"")}</b></p><p>${esc(context.video.voiceover||"")}</p>` : ""}
 
     <h4>Social caption</h4>
     <p>${esc(socialCaption)}</p>
