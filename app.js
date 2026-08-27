@@ -45,8 +45,19 @@ function selectStory(i){
 
 async function api(action, body, retry=true){
   const endpoint=action==="ILLUSTRATE"?"/api/illustrate":"/api/discover";
+  const policy={
+    SCOUT:{timeout:55000,retry:false,label:"การค้นหาเรื่องราวใช้เวลานานเกินไป กรุณากด Discover 5 Stories อีกครั้ง"},
+    RESEARCH:{timeout:55000,retry:false,label:"การ Research ใช้เวลานานเกินไป กรุณาลอง Research อีกครั้ง"},
+    VERIFY:{timeout:55000,retry:false,label:"การ Verify ใช้เวลานานเกินไป กรุณาลอง Verify อีกครั้ง"},
+    WRITE:{timeout:55000,retry:false,label:"การเขียนเรื่องใช้เวลานานเกินไป กรุณาลอง Write อีกครั้ง"},
+    VISUAL:{timeout:55000,retry:false,label:"การวางภาพใช้เวลานานเกินไป กรุณาลอง Visual อีกครั้ง"},
+    MAP:{timeout:55000,retry:false,label:"การสร้าง Map ใช้เวลานานเกินไป กรุณาลอง Map อีกครั้ง"},
+    ILLUSTRATE:{timeout:90000,retry:true,label:"การสร้าง Illustration ใช้เวลานานเกินไป กรุณาลอง Illustration อีกครั้ง"},
+    CONTENT_SOCIAL:{timeout:65000,retry:true,label:"การสร้าง Social Content ใช้เวลานานเกินไป กรุณากด Content Pack อีกครั้ง"},
+    CONTENT_REEL:{timeout:65000,retry:true,label:"การสร้าง Reel Script ใช้เวลานานเกินไป กรุณากด Content Pack อีกครั้ง"}
+  }[action]||{timeout:55000,retry:false,label:"AI ใช้เวลานานเกินไป กรุณาลองขั้นตอนนี้อีกครั้ง"};
   const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),55000);
+  const timer=setTimeout(()=>controller.abort(),policy.timeout);
   try{
     const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,...body}),signal:controller.signal});
     const text=await r.text();
@@ -54,11 +65,11 @@ async function api(action, body, retry=true){
     if(!r.ok)throw new Error(d.error||`API request failed (${r.status})`);
     return d;
   }catch(e){
-    if(retry && action.startsWith("CONTENT_")){
+    if(retry && policy.retry){
       await new Promise(resolve=>setTimeout(resolve,900));
       return api(action,body,false);
     }
-    if(e.name==="AbortError")throw new Error("AI ใช้เวลานานเกินไป กรุณากด Content Pack อีกครั้ง");
+    if(e.name==="AbortError")throw new Error(policy.label);
     throw e;
   }finally{clearTimeout(timer)}
 }
