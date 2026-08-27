@@ -17,10 +17,12 @@ const CONTENT_SOCIAL_SCHEMA={type:"object",additionalProperties:false,properties
 const CONTENT_REEL_SCHEMA={type:"object",additionalProperties:false,properties:{reel_script:{type:"array",minItems:3,maxItems:6,items:{type:"string"}}},required:["reel_script"]};
 
 function outputText(d){if(typeof d?.output_text==="string")return d.output_text;for(const o of d?.output||[])for(const c of o?.content||[])if(c?.type==="output_text")return c.text||"";return""}
-async function ask(prompt,schema,name,{fast=false}={}){
+async function ask(prompt,schema,name,{fast=false,timeout=45000}={}){
  const controller=new AbortController();
- const timer=setTimeout(()=>controller.abort(),45000);
- const model=fast?(process.env.OPENAI_FAST_MODEL||"gpt-5-mini"):(process.env.OPENAI_MODEL||"gpt-5.6");
+ const timer=setTimeout(()=>controller.abort(),timeout);
+ // Discovery must feel instant. Use a small, low-latency model by default;
+ // OPENAI_FAST_MODEL can still override this from Vercel if desired.
+ const model=fast?(process.env.OPENAI_FAST_MODEL||"gpt-4.1-mini"):(process.env.OPENAI_MODEL||"gpt-5.6");
  let r;
  try{
   r=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:controller.signal,
@@ -44,7 +46,7 @@ Create exactly five distinct, traveller-useful stories in Thai. Keep proper plac
 Classify FACT/MIXED/LEGEND and confidence 0-100. Include hook, grounded story, why it matters, specific location, photo idea and 1-3 useful public source URLs.
 Prefer official tourism, museum, government, UNESCO, university, encyclopedia or established cultural institutions. Do not invent URLs; use an authoritative root URL when uncertain.
 Never present folklore as established fact. No markdown.`;
-   return res.status(200).json(await ask(p,SCOUT_SCHEMA,"travel_story_v192",{fast:true}));
+   return res.status(200).json(await ask(p,SCOUT_SCHEMA,"travel_story_v193",{fast:true,timeout:52000}));
   }
   if(!story)return res.status(400).json({error:"Select a story first"});
   const base=`Destination: ${place}. Selected story: ${JSON.stringify(story)}. Work only on this selected story. Write in Thai. Preserve proper nouns. Never turn uncertain claims into facts.`;
