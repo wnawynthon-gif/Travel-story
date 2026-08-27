@@ -17,10 +17,19 @@ const CONTENT_SOCIAL_SCHEMA={type:"object",additionalProperties:false,properties
 const CONTENT_REEL_SCHEMA={type:"object",additionalProperties:false,properties:{reel_script:{type:"array",minItems:3,maxItems:6,items:{type:"string"}}},required:["reel_script"]};
 
 function outputText(d){if(typeof d?.output_text==="string")return d.output_text;for(const o of d?.output||[])for(const c of o?.content||[])if(c?.type==="output_text")return c.text||"";return""}
-async function ask(prompt,schema,name){
- const r=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},
- body:JSON.stringify({model:process.env.OPENAI_MODEL||"gpt-5.6",input:[{role:"user",content:[{type:"input_text",text:prompt}]}],text:{format:{type:"json_schema",name,strict:true,schema}}})});
- const d=await r.json();if(!r.ok)throw new Error(d?.error?.message||"OpenAI request failed");
+async function ask(prompt,schema,name,{fast=false}={}){
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),45000);
+ const model=fast?(process.env.OPENAI_FAST_MODEL||"gpt-5-mini"):(process.env.OPENAI_MODEL||"gpt-5.6");
+ let r;
+ try{
+  r=await fetch("https://api.openai.com/v1/responses",{method:"POST",headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,"Content-Type":"application/json"},signal:controller.signal,
+  body:JSON.stringify({model,input:[{role:"user",content:[{type:"input_text",text:prompt}]}],text:{format:{type:"json_schema",name,strict:true,schema}}})});
+ }catch(e){
+  if(e?.name==="AbortError")throw new Error(`OpenAI timed out while running ${name}`);
+  throw e;
+ }finally{clearTimeout(timer)}
+ const d=await r.json();if(!r.ok)throw new Error(d?.error?.message||`OpenAI request failed (${r.status})`);
  try{return JSON.parse(outputText(d))}catch{throw new Error("AI returned invalid structured data")}
 }
 export default async function handler(req,res){
@@ -35,7 +44,7 @@ Create exactly five distinct, traveller-useful stories in Thai. Keep proper plac
 Classify FACT/MIXED/LEGEND and confidence 0-100. Include hook, grounded story, why it matters, specific location, photo idea and 1-3 useful public source URLs.
 Prefer official tourism, museum, government, UNESCO, university, encyclopedia or established cultural institutions. Do not invent URLs; use an authoritative root URL when uncertain.
 Never present folklore as established fact. No markdown.`;
-   return res.status(200).json(await ask(p,SCOUT_SCHEMA,"travel_story_final"));
+   return res.status(200).json(await ask(p,SCOUT_SCHEMA,"travel_story_v192",{fast:true}));
   }
   if(!story)return res.status(400).json({error:"Select a story first"});
   const base=`Destination: ${place}. Selected story: ${JSON.stringify(story)}. Work only on this selected story. Write in Thai. Preserve proper nouns. Never turn uncertain claims into facts.`;
