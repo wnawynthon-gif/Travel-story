@@ -53,7 +53,9 @@ async function api(action, body, retry=true){
     MAP:{timeout:55000,retry:false,label:"การสร้าง Map ใช้เวลานานเกินไป กรุณาลอง Map อีกครั้ง"},
     ILLUSTRATE:{timeout:90000,retry:true,label:"การสร้าง Illustration ใช้เวลานานเกินไป กรุณาลอง Illustration อีกครั้ง"},
     CONTENT_SOCIAL:{timeout:65000,retry:true,label:"การสร้าง Social Content ใช้เวลานานเกินไป กรุณากด Content Pack อีกครั้ง"},
-    CONTENT_REEL:{timeout:65000,retry:true,label:"การสร้าง Reel Script ใช้เวลานานเกินไป กรุณากด Content Pack อีกครั้ง"}
+    CONTENT_REEL:{timeout:65000,retry:true,label:"การสร้าง Reel Script ใช้เวลานานเกินไป กรุณากด Content Pack อีกครั้ง"},
+    PUBLISH_FEED:{timeout:52000,retry:true,label:"การสร้าง Facebook / Instagram Pack ใช้เวลานานเกินไป กรุณาลอง Publish อีกครั้ง"},
+    PUBLISH_SHORTS:{timeout:52000,retry:true,label:"การสร้าง Reels / TikTok / Shorts Pack ใช้เวลานานเกินไป กรุณาลอง Publish อีกครั้ง"}
   }[action]||{timeout:55000,retry:false,label:"AI ใช้เวลานานเกินไป กรุณาลองขั้นตอนนี้อีกครั้ง"};
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),policy.timeout);
@@ -97,6 +99,18 @@ function renderStage(action,d){
     const route=stops.length===4?`https://www.google.com/maps/dir/?api=1&origin=${q(stops[0])}&destination=${q(stops[3])}&waypoints=${q(stops[1])}%7C${q(stops[2])}&travelmode=walking`:"#";
     workContent.innerHTML=`<p class="lead">${esc(d.map_summary)}</p><ol class="map-stops">${stops.map((x,i)=>`<li><span class="stop-number">${i+1}</span><div><b>${esc(x.name)}</b> — ${esc(x.reason)}<br><small>${esc(x.location)}</small><br><a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${q(x)}">Open point ${i+1} in Google Maps ↗</a></div></li>`).join("")}</ol><p><b>Route:</b> ${esc(d.route_note)}</p><a class="maplink route-link" target="_blank" rel="noopener" href="${route}">Open route 1 → 2 → 3 → 4 in Google Maps ↗</a>`;
   }
+  if(action==="PUBLISH"){
+    const block=(name,html,copy)=>`<div class="publish-card"><div class="publish-head"><h3>${name}</h3><button class="secondary copy-platform" data-copy="${esc(copy)}">Copy</button></div>${html}</div>`;
+    const fb=d.facebook||{}, ig=d.instagram||{}, ir=d.instagram_reel||{}, tt=d.tiktok||{}, yt=d.youtube_shorts||{};
+    workContent.innerHTML=`<div class="publish-grid">
+      ${block("Facebook",`<p>${esc(fb.post)}</p><p class="hashtags">${(fb.hashtags||[]).map(esc).join(" ")}</p><p><b>CTA:</b> ${esc(fb.cta)}</p>`,`${fb.post||""}\n\n${(fb.hashtags||[]).join(" ")}\n${fb.cta||""}`)}
+      ${block("Instagram",`<p><b>Cover:</b> ${esc(ig.cover_text)}</p><p>${esc(ig.caption)}</p><p class="hashtags">${(ig.hashtags||[]).map(esc).join(" ")}</p><h4>Carousel</h4><ol>${(ig.carousel_slides||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ol>`,`${ig.caption||""}\n\n${(ig.hashtags||[]).join(" ")}`)}
+      ${block("Instagram Reel",`<p><b>Hook:</b> ${esc(ir.hook)}</p><p><b>Cover:</b> ${esc(ir.cover_text)}</p><p>${esc(ir.caption)}</p><p class="hashtags">${(ir.hashtags||[]).map(esc).join(" ")}</p>`,`${ir.hook||""}\n${ir.caption||""}\n\n${(ir.hashtags||[]).join(" ")}`)}
+      ${block("TikTok",`<p><b>Hook:</b> ${esc(tt.hook)}</p><p>${esc(tt.caption)}</p><p class="hashtags">${(tt.hashtags||[]).map(esc).join(" ")}</p>`,`${tt.hook||""}\n${tt.caption||""}\n\n${(tt.hashtags||[]).join(" ")}`)}
+      ${block("YouTube Shorts",`<p><b>Title:</b> ${esc(yt.title)}</p><p><b>Hook:</b> ${esc(yt.hook)}</p><p>${esc(yt.description)}</p><p class="hashtags">${(yt.hashtags||[]).map(esc).join(" ")}</p>`,`${yt.title||""}\n\n${yt.description||""}\n\n${(yt.hashtags||[]).join(" ")}`)}
+    </div><p class="hint">Ready-to-copy pack only — v1.9.7 does not post to your social accounts automatically.</p>`;
+    setTimeout(()=>document.querySelectorAll(".copy-platform").forEach(b=>b.onclick=async()=>{await navigator.clipboard.writeText(b.dataset.copy||"");const old=b.textContent;b.textContent="Copied ✓";setTimeout(()=>b.textContent=old,1000)}),0);
+  }
   if(action==="CONTENT"){
     workContent.innerHTML=`<h3>${esc(d.title)}</h3><p class="lead">${esc(d.short_caption)}</p><h3>Long caption</h3><p>${esc(d.long_caption)}</p><h3>Hashtags</h3><p>${(d.hashtags||[]).map(esc).join(" ")}</p><h3>Reel / Short-video script</h3><ol>${(d.reel_script||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ol>`;
     renderFinalPack(d);
@@ -108,7 +122,12 @@ async function runStage(action){
   busy(`AI · ${action}…`); workspace.hidden=false; workStage.textContent=action; workContent.innerHTML="<p>กำลังทำงานกับ Story Card ที่เลือก…</p>";
   try{
     let d;
-    if(action==="CONTENT"){
+    if(action==="PUBLISH"){
+      workContent.innerHTML="<p>กำลังสร้าง Social Publishing Pack… <b>Facebook + Instagram + Reels + TikTok + YouTube Shorts</b></p>";
+      const payload={place:place.value.trim(),theme:theme.value,story:selected,context};
+      const [feed,shorts]=await Promise.all([api("PUBLISH_FEED",payload),api("PUBLISH_SHORTS",payload)]);
+      d={...feed,...shorts};
+    }else   if(action==="CONTENT"){
       workContent.innerHTML="<p>กำลังสร้าง Content Pack… <b>Social + Reel</b> ทำพร้อมกันเพื่อลดเวลารอ</p>";
       const payload={place:place.value.trim(),theme:theme.value,story:selected,context};
       const [social,reel]=await Promise.all([api("CONTENT_SOCIAL",payload),api("CONTENT_REEL",payload)]);
