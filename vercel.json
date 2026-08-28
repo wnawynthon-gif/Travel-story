@@ -1,6 +1,7 @@
 {
   "functions": {
-    "api/discover.js": { "maxDuration": 60 },
-    "api/illustrate.js": { "maxDuration": 60 }
+    "api/guide.js": {
+      "maxDuration": 60
+    }
   }
 }

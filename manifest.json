@@ -1,23 +1,8 @@
 {
-  "name": "Travel Story Engine",
-  "short_name": "Travel Story",
-  "start_url": "./",
-  "scope": "./",
+  "name": "Travel Guide Engine",
+  "short_name": "Travel Guide",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#f6f1e7",
-  "theme_color": "#f6f1e7",
-  "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ]
+  "background_color": "#fff8ef",
+  "theme_color": "#fff8ef"
 }
