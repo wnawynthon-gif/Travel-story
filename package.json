@@ -1,0 +1,7 @@
+{
+  "name": "travel-guide-engine",
+  "version": "2.2.0",
+  "private": true,
+  "description": "Travel Guide Engine — static frontend + Vercel serverless function",
+  "engines": { "node": "22.x" }
+}
