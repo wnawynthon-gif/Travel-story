@@ -1,7 +1,1 @@
-{
-  "functions": {
-    "api/guide.js": {
-      "maxDuration": 60
-    }
-  }
-}
+{}

@@ -23,3 +23,7 @@ Included: Stories, history, legends/true stories, attractions, seasonal discover
 Removed completely: Visual workflow, illustration/image generation, visual prompts, Content Pack.
 
 Deploy to Vercel and set `OPENAI_API_KEY`. Optional `OPENAI_MODEL` defaults to `gpt-5.6`.
+
+
+## Vercel deployment note (v2.1 fixed)
+Vercel should auto-detect `api/guide.js` as a Serverless Function. The `vercel.json` file is intentionally minimal (`{}`). When uploading to GitHub, make sure the `api` folder itself is uploaded and contains `guide.js`; uploading only the top-level files will make `/api/guide` unavailable.

@@ -1,0 +1,18 @@
+Travel Guide Engine v2.1 - Vercel deploy check
+
+REQUIRED repository structure:
+/
+  index.html
+  app.js
+  style.css
+  manifest.json
+  vercel.json
+  README.md
+  api/
+    guide.js
+
+IMPORTANT:
+- api/guide.js MUST remain inside the api folder in GitHub.
+- Do not move guide.js to the repository root.
+- vercel.json intentionally contains only {} so Vercel auto-detects /api/guide.js.
+- Keep OPENAI_API_KEY in Vercel Environment Variables.
