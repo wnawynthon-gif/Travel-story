@@ -21,7 +21,17 @@ const BASE = `You are Travel Guide Engine. Use real destinations, neighbourhoods
 
 For anything seasonal, separate general guidance from historical observations. Never imply a specific historical peak date repeats every year. Prefer a window such as late October to mid-November over a guaranteed date.
 
-Never output visual prompts, illustration prompts, image instructions or content packs. Write tightly: no preamble, no filler, no repetition. Return JSON only.`;
+Never output visual prompts, illustration prompts, image instructions or content packs. Write tightly: no preamble, no filler, no repetition. Return JSON only.
+
+INPUT: the destination or area may be written in Thai, English or the local script. Interpret it correctly before answering — for example โซล is Seoul, เยาวราช is Yaowarat in Bangkok, ฮงแด is Hongdae, โอซาก้า is Osaka. Never treat a Thai spelling as an unknown place.`;
+
+// Enum values (category, verification) are part of the schema contract and must
+// stay in English regardless of the output language.
+function langRule(lang) {
+  if (lang === 'en') return 'OUTPUT LANGUAGE: write every text field in English.';
+  if (lang === 'auto') return 'OUTPUT LANGUAGE: write every text field in the same language the user used for the destination and area.';
+  return `OUTPUT LANGUAGE: write every text field in natural Thai (ภาษาไทย) — summary, descriptions, stories, tips, route notes and captions. Use the Thai name a Thai traveller would recognise, and add the local or English name in brackets on first mention where it helps, e.g. พระราชวังเคียงบกกุง (Gyeongbokgung). Do not translate the "category" and "verification" values: those two fields must stay exactly in English as the schema specifies.`;
+}
 
 const GUIDE_SYS = `${BASE}
 
@@ -129,7 +139,7 @@ module.exports = async (req, res) => {
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
-  const { city = '', area = '', interest = 'auto', mode = 'all' } = body || {};
+  const { city = '', area = '', interest = 'auto', mode = 'all', lang = 'th' } = body || {};
   if (!String(city).trim()) return fail(res, 400, 'Destination is required');
 
   const context = `Destination: ${city}\nArea/street: ${area || 'Discover the best areas'}\nInterest: ${interest === 'auto' ? 'Auto Discover — choose the most rewarding mix yourself, do not wait for extra keywords' : interest}`;
@@ -143,15 +153,15 @@ module.exports = async (req, res) => {
   try {
     // Both halves in flight at once: total time is the slower one, not the sum.
     const [guide, discover] = await Promise.all([
-      ask({ key, system: GUIDE_SYS, user: guideUser, schema: guideSchema, name: 'guide', signal: ac.signal }),
-      ask({ key, system: DISCOVER_SYS, user: discoverUser, schema: discoverSchema, name: 'discover', signal: ac.signal })
+      ask({ key, system: `${GUIDE_SYS}\n\n${langRule(lang)}`, user: guideUser, schema: guideSchema, name: 'guide', signal: ac.signal }),
+      ask({ key, system: `${DISCOVER_SYS}\n\n${langRule(lang)}`, user: discoverUser, schema: discoverSchema, name: 'discover', signal: ac.signal })
     ]);
 
     return res.status(200).json({
       ...guide,
       discoveries: discover.discoveries || [],
       stories: discover.stories || [],
-      _meta: { model: MODEL, effort: EFFORT, ms: Date.now() - started }
+      _meta: { model: MODEL, effort: EFFORT, lang, ms: Date.now() - started }
     });
   } catch (e) {
     if (e.name === 'AbortError' || /aborted/i.test(e.message || '')) {
