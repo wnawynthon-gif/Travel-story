@@ -11,9 +11,27 @@ const ikey=n=>`${(data&&data.city)||city.value}|${n}`;
 function illBtn(subject){
   if(!subject||!subject.name)return'';
   const i=ILL.push(subject)-1;const cached=IMG[ikey(subject.name)];
-  return `<div class="ill" data-slot="${i}">${cached
-    ? `<img src="${cached}" alt="${esc(subject.name)}"><a class="ill-dl" href="${cached}" download="${esc(subject.name)}.webp">ดาวน์โหลดภาพ</a>`
-    : `<button class="ill-btn" data-ill="${i}">🎨 สร้างภาพ</button>`}</div>`;
+  return `<div class="ill" data-slot="${i}">${cached?imgHtml(i,subject.name,cached):`<button class="ill-btn" data-ill="${i}">🎨 สร้างภาพ</button>`}</div>`;
+}
+function imgHtml(i,name,src){
+  return `<img src="${src}" alt="${esc(name)}"><div class="ill-acts"><button class="ill-act" data-dl="${i}">💾 บันทึกภาพ</button><button class="ill-act" data-open="${i}">↗ เปิดภาพเต็ม</button></div>`;
+}
+// Safari ignores <a download> on a data: URL, so convert to a Blob first and
+// prefer the share sheet on iOS/iPadOS — that is what offers "Save to Photos".
+function fname(name){const a=String(name||'').replace(/[^\w\-]+/g,'-').replace(/^-+|-+$/g,'');return (a||'travel-illustration')+'.webp'}
+async function saveImage(name,dataUrl,openOnly){
+  const blob=await (await fetch(dataUrl)).blob();
+  const n=fname(name);
+  if(!openOnly&&navigator.canShare){
+    try{
+      const file=new File([blob],n,{type:blob.type||'image/webp'});
+      if(navigator.canShare({files:[file]})){await navigator.share({files:[file],title:String(name||'')});return}
+    }catch(e){if(e&&e.name==='AbortError')return}
+  }
+  const url=URL.createObjectURL(blob);
+  if(openOnly){window.open(url,'_blank')}
+  else{const a=document.createElement('a');a.href=url;a.download=n;document.body.appendChild(a);a.click();a.remove()}
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
 
 function list(title,icon,items,withIll){return `<div class="card"><h3>${icon} ${title}</h3><ul>${arr(items).map(x=>`<li><b>${esc(x.name||x.title||x)}</b>${x.street?` — ${esc(x.street)}`:''}${x.description?`<br>${esc(x.description)}`:''}${withIll&&x.name?illBtn({name:x.name,description:x.description,street:x.street,category:title}):''}</li>`).join('')}</ul></div>`}
@@ -56,6 +74,16 @@ async function callApi(path,payload,timeoutMs=150000){
 
 // One delegated handler for every illustrate button in the result panel.
 content.addEventListener('click',async e=>{
+  const act=e.target.closest('[data-dl],[data-open]');
+  if(act){
+    const openOnly=act.hasAttribute('data-open');
+    const subj=ILL[Number(act.dataset.dl??act.dataset.open)];if(!subj)return;
+    const src=IMG[ikey(subj.name)];if(!src)return;
+    const label=act.textContent;act.disabled=true;act.textContent='กำลังเตรียม…';
+    try{await saveImage(subj.name,src,openOnly)}
+    catch(err){act.textContent='บันทึกไม่สำเร็จ — กดค้างที่ภาพเพื่อบันทึกแทน'; setTimeout(()=>{act.textContent=label;act.disabled=false},4000);return}
+    act.textContent=label;act.disabled=false;return;
+  }
   const btn=e.target.closest('.ill-btn');if(!btn)return;
   const subject=ILL[Number(btn.dataset.ill)];if(!subject)return;
   const slot=btn.closest('.ill');
@@ -63,7 +91,7 @@ content.addEventListener('click',async e=>{
   try{
     const j=await callApi('/api/illustrate',{city:(data&&data.city)||city.value.trim(),place:(data&&data.area)||area.value.trim(),subject});
     IMG[ikey(subject.name)]=j.image;
-    slot.innerHTML=`<img src="${j.image}" alt="${esc(subject.name)}"><a class="ill-dl" href="${j.image}" download="${esc(subject.name)}.webp">ดาวน์โหลดภาพ</a>`;
+    slot.innerHTML=imgHtml(Number(btn.dataset.ill),subject.name,j.image);
   }catch(err){
     slot.innerHTML=`<div class="ill-err">${esc(err.message)}</div><button class="ill-btn" data-ill="${btn.dataset.ill}">ลองใหม่</button>`;
   }

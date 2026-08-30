@@ -1,6 +1,22 @@
-# Travel Guide Engine v2.5
+# Travel Guide Engine v2.6
 
 Static frontend + two Vercel serverless functions on the OpenAI API.
+
+## v2.6 — saving illustrations
+
+The old download link was `<a href="data:image/webp;base64,..." download>`, which
+Safari silently ignores: it does not honour the `download` attribute on `data:`
+URLs. Each finished illustration now has two buttons instead.
+
+- **บันทึกภาพ** converts the data URL to a Blob and, where the browser supports
+  it, hands it to the native share sheet — on iPad and iPhone that is what
+  offers "Save to Photos". Elsewhere it falls back to an object-URL download.
+- **เปิดภาพเต็ม** opens the image via an object URL, so it can also be saved by
+  long-pressing it.
+- Filenames are stripped to ASCII, so a Thai place name yields either its Latin
+  part or `travel-illustration.webp` rather than a name the filesystem mangles.
+- If saving still fails, the button says so and suggests long-pressing the
+  image, rather than doing nothing.
 
 ## v2.5 — Thai output and Thai search
 

@@ -2,7 +2,9 @@
 .ill-btn{font-size:12px;padding:7px 11px;background:#fff5ec;border-color:#e5c9ae;color:#a4522f}
 .ill-btn:disabled{opacity:.65;cursor:progress}
 .ill img{display:block;width:100%;border-radius:12px;margin-top:4px;border:1px solid #eadfce}
-.ill-dl{display:inline-block;margin-top:6px;font-size:12px;font-weight:800;color:#4e8a77}
+.ill-acts{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.ill-act{font-size:12px;padding:6px 10px;background:#f2f7f4;border-color:#cfe0d7;color:#3f7563}
+.ill-act:disabled{opacity:.65;cursor:progress}
 .ill-err{font-size:12px;color:#b4442a;margin-bottom:6px}
 li .ill{margin:8px 0 14px}
 #lang{min-width:120px}
