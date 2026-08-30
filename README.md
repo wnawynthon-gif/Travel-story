@@ -1,49 +1,69 @@
-# Travel Guide Engine v2.2
+# Travel Guide Engine v2.4
 
-Unified Travel Story Engine + Travel Area Guide.
-Static frontend + one Vercel serverless function calling the OpenAI Responses API.
+Static frontend + two Vercel serverless functions on the OpenAI API.
 
-## What v2.2 fixes
+## v2.4 — per-card illustrations
 
-The v2.1 build failed with `The string did not match the expected pattern.`
+Every place card now carries its own "🎨 สร้างภาพ" button. Nothing is generated
+until you press one, so the guide still returns in 20-60s and you only pay for
+the images you actually want.
 
-That message is Safari's generic error. The frontend called `response.json()` on a
-body that was not JSON — the Vercel HTML error page (504 timeout or 404 missing
-function) — and Safari surfaced its own cryptic wording instead of the real cause.
+- `api/illustrate.js` accepts any card subject — discovery, attraction, photo
+  spot, area, food, cafe, shop or story — not just a story as in v1.9.7. The
+  old `{ story: {...} }` body shape is still accepted.
+- The v1.9.6 watercolor scrapbook style and composition rules are carried over
+  verbatim, including adaptive mood (legend/folklore renders cool and
+  atmospheric, food renders warm and lively, seasonal follows the stated
+  season).
+- Finished images are cached in memory by place name, so switching tabs or
+  revisiting a card never regenerates or re-bills.
+- Each image gets a download link.
+- Illustration failures render inside the card with a retry button; they never
+  break the guide.
 
-Changes:
+Buttons appear on: Best Areas, Auto Discover, Attractions, Photo/Check-in,
+Food, Cafés, Shopping, What to Buy, and Stories. Not on Local Tips or Route.
 
-1. **Frontend reads the body as text first**, then parses. HTTP status and the
-   actual server message are now shown, so the real failure is visible.
-2. **`GET /api/guide` health check** — returns `{ ok, model, hasKey, node }`.
-   Instant answer to "is the function deployed and is the key set?"
-3. **Server-side abort at `MAX_SECONDS` (55s)** so the function returns a JSON 504
-   before Vercel's own timeout replaces it with an HTML page.
-4. **`maxDuration: 60` in vercel.json** plus `package.json` pinning Node 22.
-5. **Faster default model** — `gpt-5.6-terra` with `reasoning.effort: low` and
-   `max_output_tokens`. v2.1 used the `gpt-5.6` alias, which routes to the flagship
-   `gpt-5.6-sol`; generating this whole schema with it regularly exceeded 60s.
-6. **Explicit length budget in the system prompt** — fixed item counts and 1–2
-   sentence descriptions, so the response finishes inside the time budget.
-7. **API key is trimmed and validated** — a pasted trailing newline no longer
-   produces an invalid Authorization header.
-8. **No more `JSON.parse('')`** — empty output, refusals, and `status: "incomplete"`
-   each return their own readable error.
-9. Duplicate submissions blocked while a request is in flight.
+## v2.3 — speed
 
-## Auto Discover
+The full schema in one request kept exceeding the function time limit. v2.3
+splits it into two requests fired in parallel — practical guide, and
+discoveries plus stories — so wall-clock time is the slower of the two rather
+than the sum. Default model is `gpt-5.6-luna` at `low` reasoning effort.
 
-Typing only a destination such as `Seoul` instructs the model to proactively
-discover must-see places, hidden gems, seasonal foliage spots, romantic and
-atmospheric places, photo/check-in spots, famous streets, university campuses,
-local stories and legends, food, cafes, shopping and markets, plus nearby places
-that combine into a sensible walking route.
+## v2.2 — error visibility
 
-Seasonal entries carry structured context for season/window, historical reference,
-station/access, etiquette and nearby pairings. Historical peak dates are never
-presented as guaranteed dates for future years.
+`The string did not match the expected pattern.` was Safari's generic error for
+calling `response.json()` on a non-JSON body: the app was receiving Vercel's
+HTML 404 page because `api/guide.js` had been committed without its `.js`
+extension. The frontend now reads the body as text first and reports the real
+HTTP status, and both functions answer with JSON on every path, including a
+`GET` health check.
 
-## Deploy
+## Environment variables
 
-Push to GitHub, import into Vercel, set `OPENAI_API_KEY`, deploy.
-See `DEPLOY_CHECK.txt` for the full troubleshooting order.
+| Key | Default | Notes |
+|---|---|---|
+| `OPENAI_API_KEY` | — | required |
+| `OPENAI_MODEL` | `gpt-5.6-luna` | text; `terra` balanced, `sol` flagship but slow |
+| `OPENAI_EFFORT` | `low` | `none` is fastest |
+| `OPENAI_MAX_TOKENS` | `5000` | per text call |
+| `OPENAI_IMAGE_MODEL` | `gpt-image-2` | |
+| `IMAGE_SIZE` | `1536x1024` | 3:2 landscape |
+| `IMAGE_QUALITY` | `medium` | `low` is faster and cheaper |
+| `MAX_SECONDS` | `55` | must stay under `maxDuration` |
+
+## Health checks
+
+- `/api/guide` — GET returns model, effort and `hasKey`
+- `/api/illustrate` — GET returns image model, size, quality and `hasKey`
+
+## Deploy notes
+
+`vercel.json` declares both functions with `maxDuration: 60`, the Hobby ceiling
+without Fluid compute. If a build fails with a `maxDuration` complaint, lower
+the number or replace the file with `{}`. Enabling Fluid compute raises the
+ceiling to 300; then set `MAX_SECONDS` to 290.
+
+Files must sit at the repository root with `api/guide.js` and
+`api/illustrate.js` inside the `api` folder, extensions included.
