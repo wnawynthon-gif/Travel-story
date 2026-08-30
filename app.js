@@ -1,7 +1,7 @@
 // Travel Guide Engine v2.4 — app.js
 // Adds a per-card "สร้างภาพ" button. Each card illustrates only itself, so the
 // guide still loads fast and image generation is opt-in, one place at a time.
-const $=s=>document.querySelector(s);let mode='all',data=null,tab='overview';const city=$('#city'),area=$('#area'),interest=$('#interest'),content=$('#content');const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));const arr=v=>Array.isArray(v)?v:[];
+const $=s=>document.querySelector(s);let mode='all',data=null,tab='overview';const city=$('#city'),area=$('#area'),interest=$('#interest'),lang=$('#lang'),content=$('#content');const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));const arr=v=>Array.isArray(v)?v:[];
 
 // --- illustration registry -------------------------------------------------
 // ILL holds the subject for each button in the current render; IMG caches
@@ -77,7 +77,7 @@ $('#go').onclick=async()=>{
   }
   $('#go').disabled=true;$('#status').textContent='GENERATING…';content.className='empty';content.textContent='Creating guide… (20–60s)';
   try{
-    const j=await callApi('/api/guide',{city:city.value.trim(),area:area.value.trim(),interest:interest.value,mode});
+    const j=await callApi('/api/guide',{city:city.value.trim(),area:area.value.trim(),interest:interest.value,mode,lang:lang?lang.value:'th'});
     data=j;
     $('#title').textContent=[j.area||area.value,j.city].filter(Boolean).join(' — ');
     $('#intro').textContent=j.summary;

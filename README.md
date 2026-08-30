@@ -1,6 +1,21 @@
-# Travel Guide Engine v2.4
+# Travel Guide Engine v2.5
 
 Static frontend + two Vercel serverless functions on the OpenAI API.
+
+## v2.5 — Thai output and Thai search
+
+- The Destination field no longer ships with `Seoul` hardcoded as its value; it
+  is a placeholder now, so the field starts empty.
+- New **ภาษาผลลัพธ์ / Output** selector: ไทย (default), English, or ตามที่พิมพ์
+  (match the language of the input). The choice is sent to the API and applied
+  to every text field — summary, descriptions, stories, tips, route notes and
+  captions.
+- Thai place names are interpreted explicitly, so โซล, เยาวราช, ฮงแด and
+  โอซาก้า resolve to the right places instead of being treated as unknown.
+- `category` and `verification` deliberately stay in English: they are schema
+  enums, and translating them would break the strict JSON contract and the
+  card styling that keys off them.
+- `_meta.lang` is returned with each guide so you can confirm what was applied.
 
 ## v2.4 — per-card illustrations
 
