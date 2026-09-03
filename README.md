@@ -1,6 +1,10 @@
-# Travel Guide Engine v2.6
+# Travel Guide Engine v2.7
 
 Static frontend + two Vercel serverless functions on the OpenAI API.
+
+## v2.7 — Deep Place Stories
+
+Stories now use a feature-story structure rather than short generic history blurbs. The engine actively searches its knowledge for documented incidents, famous objects, human drama, lost-and-found histories, royalty/art/design connections, and ironic links between a place's founding purpose and later events. Each story includes a hook, 5–8 sentence narrative, timeline, key people/objects, place connection, verification note, traveller relevance, and fact-check search terms. A new **Deep Place Story** interest is available. Recent incidents are included only when the model can establish them confidently; otherwise the engine falls back to documented history rather than inventing news.
 
 ## v2.6 — saving illustrations
 
