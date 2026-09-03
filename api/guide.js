@@ -1,8 +1,8 @@
-// Travel Guide Engine v2.8 — api/guide.js
+// Travel Guide Engine v3.0 — api/guide.js
 // v2.2 worked but exceeded the 55s budget: one request had to write the entire
 // schema in a single pass. v2.3 split it into two smaller requests (guide +
 // discover) fired in parallel, so wall-clock time is the slower one, not the
-// sum. v2.8 splits the "discover" half again — discoveries and stories are
+// sum. v2.9 keeps the "discover" half again — discoveries and stories are
 // now two separate calls, because together (6 discoveries with 9 fields each
 // + up to 4 feature-length stories with 11 fields each, in Thai, which runs
 // heavier per character than English) they could exceed a single call's
@@ -24,6 +24,7 @@ const SERVICE_TIER = (process.env.OPENAI_SERVICE_TIER || '').trim();
 const MAX_TOKENS = Number(process.env.OPENAI_MAX_TOKENS || 7000);
 const STORIES_MAX_TOKENS = Number(process.env.OPENAI_STORIES_TOKENS || 9000);
 const MAX_SECONDS = Number(process.env.MAX_SECONDS || 55);
+const WEB_SEARCH = !['0','false','off','no'].includes(String(process.env.OPENAI_WEB_SEARCH || 'true').toLowerCase());
 
 const BASE = `You are Travel Guide Engine. Use real destinations, neighbourhoods, streets, markets, university campuses and landmarks. Never invent exact addresses. Clearly distinguish documented history from legends or folklore. Do not claim live opening hours, current prices or availability.
 
@@ -59,23 +60,31 @@ const storiesSys = (count) => `${BASE}
 
 You produce DEEP PLACE STORIES for a travel guide — magazine-quality narratives, not generic history blurbs.
 
-Exactly ${count}. Build each story around a strong narrative connection to a real place, object or person. Aim for the richness of a feature story: a surprising hook, the backstory, a human turn, why the physical place matters, and a memorable present-day ending.
+Exactly ${count}. Use this narrative engine as the PRIMARY structure:
+PLACE → CURRENT EVENT → FAMOUS OBJECT → HISTORICAL BACKSTORY → HUMAN DRAMA → UNEXPECTED CONNECTION → PRESENT-DAY VISIT.
 
-Actively look for these story shapes when genuinely documented:
-- a recent or famous incident tied to the place (theft, disappearance, discovery, scandal, disaster, rescue, protest, unusual event);
-- a famous object/artwork/building and the people who owned, made, lost, recovered or transformed it;
-- royalty, artists, writers, designers, scientists, criminals or ordinary people whose lives intersected there;
-- rise-and-fall, lost-and-found, before-and-after, hidden origin, wartime survival, architectural controversy, local legend with a documented core;
-- an unexpected connection between the place's founding idea and something that happened there later.
+This is a discovery sequence, not a rigid checklist. Start from the real place the traveller can visit, then investigate each layer. If a layer has no strong, documented material, leave that field empty and move to the next layer; NEVER manufacture a fact merely to complete the sequence.
 
-Do not force crime or tragedy into every destination. Prefer the strongest true narrative available. If a current/recent event cannot be confidently established, use a well-documented historical story instead. Never invent a breaking-news event, quote, exact price, exact date, casualty count or ownership chain. Clearly label uncertainty.
+STORY SELECTION RULES:
+1. Search conceptually for the strongest documented hook connected to the destination: a recent/famous incident, iconic object/artwork, remarkable person, royal connection, theft/disappearance/recovery, discovery, scandal, wartime survival, architectural controversy, rise-and-fall story, or documented legend.
+2. Prefer stories with multiple connected layers and a strong human consequence over generic chronology.
+3. Current Event means a genuinely documented recent development. If you cannot establish one confidently from model knowledge, write an empty current_event field and anchor the story in documented history. Never fabricate breaking news.
+4. Famous Object can be an artwork, jewel, building element, manuscript, relic, vehicle, garment, invention, room or other identifiable object strongly tied to the place.
+5. Human Drama should explain what happened to real people: ambition, love, exile, rivalry, loss, survival, downfall, obsession, rescue or reversal — without sensationalising tragedy.
+6. Unexpected Connection is the reveal: an irony, forgotten relationship, return to origin, hidden influence, or connection between the place's purpose and what later happened there. It must be evidence-based, not clever-sounding speculation.
+7. Present-day Visit closes the loop for the traveller: what they can see, where the story becomes tangible, what detail to notice, or how knowing the story changes the visit. Do not claim live opening hours, availability or that a missing/loaned object is currently on display unless certain.
 
-Each story must include: a short headline, story type, area, hook (1-2 sentences), narrative (5-8 concise sentences), a 3-6 point timeline, key people/objects, the connection to the place, verification level, a verification note explaining what is solid vs uncertain, why it matters to a traveller, and 3-5 search terms a human editor can use to fact-check or expand the story. Write for an intelligent traveller, not as an encyclopedia entry.`;
+EDITORIAL SHAPE:
+Hook → establish the place → event/object → go backward into history → human turning point → reveal the unexpected connection → return physically to the place today. The narrative should feel like a travel feature worth sharing, while remaining factual.
+
+When web search is available, actively search the public web for a current/recent event connected to the place BEFORE choosing the story. Prefer primary/official sources and reputable reporting. A current event is optional: use it only when the search finds a relevant, credible connection. Never bend an unrelated news item to fit the place.
+
+Each story must include the seven engine fields separately, plus a short headline, story type, area, hook, a polished 7-12 sentence narrative, 3-7 point timeline, key people/objects, verification level, verification note, why it matters to a traveller, 3-5 fact-check search terms, and sources. Sources must contain only pages actually used to support the story; include title, URL, publisher and publication date when known. For a Current Event story, include at least one source supporting that event. If no credible current-event source is found, current_event must be empty. Clearly distinguish documented fact, widely reported claims and folklore. Write for an intelligent traveller, not as an encyclopedia entry.`;
 
 const item = { type: 'object', additionalProperties: false, properties: { name: { type: 'string' }, street: { type: 'string' }, description: { type: 'string' } }, required: ['name', 'street', 'description'] };
 const routeItem = { type: 'object', additionalProperties: false, properties: { name: { type: 'string' }, area: { type: 'string' }, note: { type: 'string' }, time: { type: 'string' } }, required: ['name', 'area', 'note', 'time'] };
 const discovery = { type: 'object', additionalProperties: false, properties: { name: { type: 'string' }, area: { type: 'string' }, street: { type: 'string' }, category: { type: 'string', enum: ['Seasonal', 'Photo / Check-in', 'University / Campus', 'Famous Street', 'Hidden Gem', 'Atmospheric Place'] }, description: { type: 'string' }, season: { type: 'string' }, historical_reference: { type: 'string' }, nearest_station: { type: 'string' }, etiquette: { type: 'string' }, pair_with: { type: 'string' } }, required: ['name', 'area', 'street', 'category', 'description', 'season', 'historical_reference', 'nearest_station', 'etiquette', 'pair_with'] };
-const story = { type: 'object', additionalProperties: false, properties: { title: { type: 'string' }, type: { type: 'string' }, area: { type: 'string' }, hook: { type: 'string' }, story: { type: 'string' }, timeline: { type: 'array', items: { type: 'string' } }, key_people_objects: { type: 'array', items: { type: 'string' } }, place_connection: { type: 'string' }, verification: { type: 'string', enum: ['Well documented', 'Widely reported', 'Local legend / folklore', 'Needs local verification'] }, verification_note: { type: 'string' }, why_it_matters: { type: 'string' }, fact_check_search_terms: { type: 'array', items: { type: 'string' } } }, required: ['title', 'type', 'area', 'hook', 'story', 'timeline', 'key_people_objects', 'place_connection', 'verification', 'verification_note', 'why_it_matters', 'fact_check_search_terms'] };
+const story = { type: 'object', additionalProperties: false, properties: { title: { type: 'string' }, type: { type: 'string' }, area: { type: 'string' }, hook: { type: 'string' }, place: { type: 'string' }, current_event: { type: 'string' }, famous_object: { type: 'string' }, historical_backstory: { type: 'string' }, human_drama: { type: 'string' }, unexpected_connection: { type: 'string' }, present_day_visit: { type: 'string' }, story: { type: 'string' }, timeline: { type: 'array', items: { type: 'string' } }, key_people_objects: { type: 'array', items: { type: 'string' } }, verification: { type: 'string', enum: ['Well documented', 'Widely reported', 'Local legend / folklore', 'Needs local verification'] }, verification_note: { type: 'string' }, why_it_matters: { type: 'string' }, fact_check_search_terms: { type: 'array', items: { type: 'string' } }, sources: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { title: { type: 'string' }, url: { type: 'string' }, publisher: { type: 'string' }, date: { type: 'string' } }, required: ['title','url','publisher','date'] } } }, required: ['title', 'type', 'area', 'hook', 'place', 'current_event', 'famous_object', 'historical_backstory', 'human_drama', 'unexpected_connection', 'present_day_visit', 'story', 'timeline', 'key_people_objects', 'verification', 'verification_note', 'why_it_matters', 'fact_check_search_terms', 'sources'] };
 
 const guideSchema = { type: 'object', additionalProperties: false, properties: { city: { type: 'string' }, area: { type: 'string' }, summary: { type: 'string' }, best_time: { type: 'string' }, duration: { type: 'string' }, budget: { type: 'string' }, nearest_station: { type: 'string' }, areas: { type: 'array', items: item }, attractions: { type: 'array', items: item }, photo_spots: { type: 'array', items: item }, food: { type: 'array', items: item }, cafes: { type: 'array', items: item }, shopping: { type: 'array', items: item }, what_to_buy: { type: 'array', items: item }, route: { type: 'array', items: routeItem }, tips: { type: 'array', items: { type: 'string' } }, social_caption: { type: 'string' }, short_caption: { type: 'string' } }, required: ['city', 'area', 'summary', 'best_time', 'duration', 'budget', 'nearest_station', 'areas', 'attractions', 'photo_spots', 'food', 'cafes', 'shopping', 'what_to_buy', 'route', 'tips', 'social_caption', 'short_caption'] };
 const discoveriesSchema = { type: 'object', additionalProperties: false, properties: { discoveries: { type: 'array', items: discovery } }, required: ['discoveries'] };
@@ -96,7 +105,7 @@ function extractText(j) {
 }
 
 // One Responses API call. Throws Error with a readable message on any failure.
-async function ask({ key, system, user, schema, name, signal, maxTokens }) {
+async function ask({ key, system, user, schema, name, signal, maxTokens, webSearch = false }) {
   const payload = {
     model: MODEL,
     reasoning: { effort: EFFORT },
@@ -107,6 +116,10 @@ async function ask({ key, system, user, schema, name, signal, maxTokens }) {
     ],
     text: { format: { type: 'json_schema', name, strict: true, schema } }
   };
+  if (webSearch && WEB_SEARCH) {
+    payload.tools = [{ type: 'web_search' }];
+    payload.tool_choice = 'auto';
+  }
   if (SERVICE_TIER) payload.service_tier = SERVICE_TIER;
 
   const r = await fetch('https://api.openai.com/v1/responses', {
@@ -147,9 +160,9 @@ module.exports = async (req, res) => {
 
   if (req.method === 'GET') {
     return res.status(200).json({
-      ok: true, service: 'travel-guide-engine', version: '2.8',
+      ok: true, service: 'travel-guide-engine', version: '3.0',
       model: MODEL, effort: EFFORT, serviceTier: SERVICE_TIER || null,
-      maxSeconds: MAX_SECONDS,
+      maxSeconds: MAX_SECONDS, webSearch: WEB_SEARCH,
       hasKey: Boolean((process.env.OPENAI_API_KEY || '').trim()),
       node: process.version
     });
@@ -183,14 +196,14 @@ module.exports = async (req, res) => {
     const [guide, discoveries, stories] = await Promise.all([
       ask({ key, system: `${GUIDE_SYS}\n\n${langRule(lang)}`, user: guideUser, schema: guideSchema, name: 'guide', signal: ac.signal }),
       ask({ key, system: `${DISCOVERIES_SYS}\n\n${langRule(lang)}`, user: discoveriesUser, schema: discoveriesSchema, name: 'discoveries', signal: ac.signal }),
-      ask({ key, system: `${storiesSys(storyCount)}\n\n${langRule(lang)}`, user: storiesUser, schema: storiesSchema, name: 'stories', signal: ac.signal, maxTokens: STORIES_MAX_TOKENS })
+      ask({ key, system: `${storiesSys(storyCount)}\n\n${langRule(lang)}`, user: storiesUser, schema: storiesSchema, name: 'stories', signal: ac.signal, maxTokens: STORIES_MAX_TOKENS, webSearch: true })
     ]);
 
     return res.status(200).json({
       ...guide,
       discoveries: discoveries.discoveries || [],
       stories: stories.stories || [],
-      _meta: { model: MODEL, effort: EFFORT, lang, ms: Date.now() - started }
+      _meta: { model: MODEL, effort: EFFORT, lang, webSearch: WEB_SEARCH, ms: Date.now() - started }
     });
   } catch (e) {
     if (e.name === 'AbortError' || /aborted/i.test(e.message || '')) {
