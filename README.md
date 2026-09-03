@@ -1,8 +1,14 @@
-# Travel Guide Engine v3.0
+# Travel Guide Engine v3.1
 
 Static frontend + two Vercel serverless functions on the OpenAI API.
 
-## v3.0 — Live Web Story Discovery
+## v3.1 — Parallel Per-Story Web Discovery
+
+### v3.1 performance change
+
+Stories are no longer generated as one batch. Each requested story is a separate OpenAI Responses API request with its own web search and token budget. Guide, discoveries, and every story request run concurrently with `Promise.all`, so total generation time is approximately the slowest individual request rather than the sum of four stories.
+
+`OPENAI_STORIES_TOKENS` now defaults to **4000 per story** (previously 9000 for the shared story batch). `mode=area` launches 2 story calls; the normal mode launches 4.
 
 Deep Place Stories can now use OpenAI web search during story generation. The engine searches for credible current/recent events tied to the destination, evidence-gates the Current Event layer, and returns source title, publisher, date and URL for editorial checking. If no credible relevant current event is found, the layer stays empty and the story falls back to documented history. Set `OPENAI_WEB_SEARCH=false` to disable this feature.
 
