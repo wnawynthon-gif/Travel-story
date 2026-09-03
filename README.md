@@ -1,6 +1,15 @@
-# Travel Guide Engine v2.7
+# Travel Guide Engine v2.8
 
 Static frontend + two Vercel serverless functions on the OpenAI API.
+
+## v2.8 — Split discoveries and stories into separate calls
+
+`api/guide.js` used to fetch discoveries (6 places) and stories (4 feature
+stories) in one OpenAI call. In Thai output that could exceed the token
+budget and come back "incomplete" (`OPENAI_MAX_TOKENS`). Now discoveries and
+stories are two separate calls (three total, alongside `guide`), each with
+its own, more generous token budget. See the comment at the top of
+`api/guide.js` for the new env vars.
 
 ## v2.7 — Deep Place Stories
 
