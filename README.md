@@ -1,6 +1,14 @@
-# Travel Guide Engine v2.8
+# Travel Guide Engine v3.0
 
 Static frontend + two Vercel serverless functions on the OpenAI API.
+
+## v3.0 — Live Web Story Discovery
+
+Deep Place Stories can now use OpenAI web search during story generation. The engine searches for credible current/recent events tied to the destination, evidence-gates the Current Event layer, and returns source title, publisher, date and URL for editorial checking. If no credible relevant current event is found, the layer stays empty and the story falls back to documented history. Set `OPENAI_WEB_SEARCH=false` to disable this feature.
+
+## v2.9 — Seven-layer Deep Place Story Engine
+
+Deep Place Stories now use the primary narrative sequence **Place → Current Event → Famous Object → Historical Backstory → Human Drama → Unexpected Connection → Present-day Visit**. Layers are evidence-gated rather than mandatory: weak or unavailable current-event/object material is left empty instead of invented. Story selection prioritises multi-layer, human, place-specific narratives and closes every story by returning the traveller to the physical place today. The UI exposes each layer separately for editorial review and fact-checking.
 
 ## v2.8 — Split discoveries and stories into separate calls
 
