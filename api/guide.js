@@ -1,13 +1,11 @@
-// Travel Guide Engine v3.0 — api/guide.js
+// Travel Guide Engine v3.1 — api/guide.js
 // v2.2 worked but exceeded the 55s budget: one request had to write the entire
 // schema in a single pass. v2.3 split it into two smaller requests (guide +
 // discover) fired in parallel, so wall-clock time is the slower one, not the
-// sum. v2.9 keeps the "discover" half again — discoveries and stories are
-// now two separate calls, because together (6 discoveries with 9 fields each
-// + up to 4 feature-length stories with 11 fields each, in Thai, which runs
-// heavier per character than English) they could exceed a single call's
-// token budget and come back "incomplete". Three calls now run in parallel
-// instead of two.
+// sum. v3.1 fans stories out again: every story is its own Responses API call
+// with its own web search and output budget. guide + discoveries + all story
+// calls start together, so wall-clock time is bounded by the slowest request
+// rather than the sum of four feature-length stories.
 //
 // Env (all optional except the key):
 //   OPENAI_API_KEY         required
@@ -15,14 +13,14 @@
 //   OPENAI_EFFORT          default low            (none | low | medium | high)
 //   OPENAI_SERVICE_TIER    e.g. fast              (only sent when set)
 //   OPENAI_MAX_TOKENS      default 7000 per call  (guide + discoveries)
-//   OPENAI_STORIES_TOKENS  default 9000 per call  (stories run longest, get more headroom)
+//   OPENAI_STORIES_TOKENS  default 4000 per story (each story is a separate call)
 //   MAX_SECONDS            default 55             (must stay under vercel maxDuration)
 
 const MODEL = (process.env.OPENAI_MODEL || 'gpt-5.6-luna').trim();
 const EFFORT = (process.env.OPENAI_EFFORT || 'low').trim();
 const SERVICE_TIER = (process.env.OPENAI_SERVICE_TIER || '').trim();
 const MAX_TOKENS = Number(process.env.OPENAI_MAX_TOKENS || 7000);
-const STORIES_MAX_TOKENS = Number(process.env.OPENAI_STORIES_TOKENS || 9000);
+const STORIES_MAX_TOKENS = Number(process.env.OPENAI_STORIES_TOKENS || 4000);
 const MAX_SECONDS = Number(process.env.MAX_SECONDS || 55);
 const WEB_SEARCH = !['0','false','off','no'].includes(String(process.env.OPENAI_WEB_SEARCH || 'true').toLowerCase());
 
@@ -56,11 +54,14 @@ You produce the DISCOVERIES half of a travel guide: notable places worth seeking
 Discoveries — exactly 6, with variety across the categories rather than duplicates: seasonal foliage or blooms, romantic/atmospheric places, photo/check-in spots, university campuses, famous streets, hidden gems. Include less-obvious places when genuinely notable; do not limit yourself to the most famous tourist attractions. For a city such as Seoul, a campus avenue known for seasonal foliage is exactly the kind of place to surface.
 For each: area, street, why it is special (one sentence), usual season/window, nearest useful station, etiquette/caution where relevant, and a nearby place that pairs on foot.`;
 
-const storiesSys = (count) => `${BASE}
+const storiesSys = (storyNumber, storyCount) => `${BASE}
 
 You produce DEEP PLACE STORIES for a travel guide — magazine-quality narratives, not generic history blurbs.
 
-Exactly ${count}. Use this narrative engine as the PRIMARY structure:
+Write exactly ONE story. This is story ${storyNumber} of ${storyCount} requested for the destination.
+Choose the strongest story you can independently verify. Avoid generic destination history and aim for a distinct hook that could stand alone as a feature.
+
+Use this narrative engine as the PRIMARY structure:
 PLACE → CURRENT EVENT → FAMOUS OBJECT → HISTORICAL BACKSTORY → HUMAN DRAMA → UNEXPECTED CONNECTION → PRESENT-DAY VISIT.
 
 This is a discovery sequence, not a rigid checklist. Start from the real place the traveller can visit, then investigate each layer. If a layer has no strong, documented material, leave that field empty and move to the next layer; NEVER manufacture a fact merely to complete the sequence.
@@ -88,7 +89,7 @@ const story = { type: 'object', additionalProperties: false, properties: { title
 
 const guideSchema = { type: 'object', additionalProperties: false, properties: { city: { type: 'string' }, area: { type: 'string' }, summary: { type: 'string' }, best_time: { type: 'string' }, duration: { type: 'string' }, budget: { type: 'string' }, nearest_station: { type: 'string' }, areas: { type: 'array', items: item }, attractions: { type: 'array', items: item }, photo_spots: { type: 'array', items: item }, food: { type: 'array', items: item }, cafes: { type: 'array', items: item }, shopping: { type: 'array', items: item }, what_to_buy: { type: 'array', items: item }, route: { type: 'array', items: routeItem }, tips: { type: 'array', items: { type: 'string' } }, social_caption: { type: 'string' }, short_caption: { type: 'string' } }, required: ['city', 'area', 'summary', 'best_time', 'duration', 'budget', 'nearest_station', 'areas', 'attractions', 'photo_spots', 'food', 'cafes', 'shopping', 'what_to_buy', 'route', 'tips', 'social_caption', 'short_caption'] };
 const discoveriesSchema = { type: 'object', additionalProperties: false, properties: { discoveries: { type: 'array', items: discovery } }, required: ['discoveries'] };
-const storiesSchema = { type: 'object', additionalProperties: false, properties: { stories: { type: 'array', items: story } }, required: ['stories'] };
+const singleStorySchema = story;
 
 function extractText(j) {
   if (typeof j.output_text === 'string' && j.output_text.trim()) return j.output_text;
@@ -160,7 +161,7 @@ module.exports = async (req, res) => {
 
   if (req.method === 'GET') {
     return res.status(200).json({
-      ok: true, service: 'travel-guide-engine', version: '3.0',
+      ok: true, service: 'travel-guide-engine', version: '3.1',
       model: MODEL, effort: EFFORT, serviceTier: SERVICE_TIER || null,
       maxSeconds: MAX_SECONDS, webSearch: WEB_SEARCH,
       hasKey: Boolean((process.env.OPENAI_API_KEY || '').trim()),
@@ -190,20 +191,34 @@ module.exports = async (req, res) => {
   const started = Date.now();
 
   try {
-    // All three in flight at once: total time is the slowest one, not the sum.
-    // Stories used to share a call (and a token budget) with discoveries; split
-    // apart, each piece needs far less headroom to finish without truncating.
-    const [guide, discoveries, stories] = await Promise.all([
+    // Fan out every story into its own request. All requests start together:
+    // guide + discoveries + N stories. Each story gets an independent web_search
+    // and its own STORIES_MAX_TOKENS budget, so four stories no longer compete
+    // inside one large response. Total wall-clock time is the slowest request.
+    const storyPromises = Array.from({ length: storyCount }, (_, i) =>
+      ask({
+        key,
+        system: `${storiesSys(i + 1, storyCount)}\n\n${langRule(lang)}`,
+        user: `${storiesUser}\nStory slot: ${i + 1}/${storyCount}. Search independently and select a compelling, well-supported angle.`,
+        schema: singleStorySchema,
+        name: `story_${i + 1}`,
+        signal: ac.signal,
+        maxTokens: STORIES_MAX_TOKENS,
+        webSearch: true
+      })
+    );
+
+    const [guide, discoveries, ...stories] = await Promise.all([
       ask({ key, system: `${GUIDE_SYS}\n\n${langRule(lang)}`, user: guideUser, schema: guideSchema, name: 'guide', signal: ac.signal }),
       ask({ key, system: `${DISCOVERIES_SYS}\n\n${langRule(lang)}`, user: discoveriesUser, schema: discoveriesSchema, name: 'discoveries', signal: ac.signal }),
-      ask({ key, system: `${storiesSys(storyCount)}\n\n${langRule(lang)}`, user: storiesUser, schema: storiesSchema, name: 'stories', signal: ac.signal, maxTokens: STORIES_MAX_TOKENS, webSearch: true })
+      ...storyPromises
     ]);
 
     return res.status(200).json({
       ...guide,
       discoveries: discoveries.discoveries || [],
-      stories: stories.stories || [],
-      _meta: { model: MODEL, effort: EFFORT, lang, webSearch: WEB_SEARCH, ms: Date.now() - started }
+      stories,
+      _meta: { model: MODEL, effort: EFFORT, lang, webSearch: WEB_SEARCH, storyCalls: storyCount, ms: Date.now() - started }
     });
   } catch (e) {
     if (e.name === 'AbortError' || /aborted/i.test(e.message || '')) {
