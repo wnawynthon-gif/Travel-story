@@ -1,20 +1,28 @@
-// Travel Guide Engine v2.7 — api/guide.js
+// Travel Guide Engine v2.8 — api/guide.js
 // v2.2 worked but exceeded the 55s budget: one request had to write the entire
-// schema in a single pass. v2.3 splits it into two smaller requests fired in
-// parallel, so wall-clock time is the slower of the two rather than the sum.
+// schema in a single pass. v2.3 split it into two smaller requests (guide +
+// discover) fired in parallel, so wall-clock time is the slower one, not the
+// sum. v2.8 splits the "discover" half again — discoveries and stories are
+// now two separate calls, because together (6 discoveries with 9 fields each
+// + up to 4 feature-length stories with 11 fields each, in Thai, which runs
+// heavier per character than English) they could exceed a single call's
+// token budget and come back "incomplete". Three calls now run in parallel
+// instead of two.
 //
 // Env (all optional except the key):
-//   OPENAI_API_KEY       required
-//   OPENAI_MODEL         default gpt-5.6-luna   (luna = fastest, terra = balanced, sol = flagship)
-//   OPENAI_EFFORT        default low            (none | low | medium | high)
-//   OPENAI_SERVICE_TIER  e.g. fast              (only sent when set)
-//   OPENAI_MAX_TOKENS    default 5000 per call
-//   MAX_SECONDS          default 55             (must stay under vercel maxDuration)
+//   OPENAI_API_KEY         required
+//   OPENAI_MODEL           default gpt-5.6-luna   (luna = fastest, terra = balanced, sol = flagship)
+//   OPENAI_EFFORT          default low            (none | low | medium | high)
+//   OPENAI_SERVICE_TIER    e.g. fast              (only sent when set)
+//   OPENAI_MAX_TOKENS      default 7000 per call  (guide + discoveries)
+//   OPENAI_STORIES_TOKENS  default 9000 per call  (stories run longest, get more headroom)
+//   MAX_SECONDS            default 55             (must stay under vercel maxDuration)
 
 const MODEL = (process.env.OPENAI_MODEL || 'gpt-5.6-luna').trim();
 const EFFORT = (process.env.OPENAI_EFFORT || 'low').trim();
 const SERVICE_TIER = (process.env.OPENAI_SERVICE_TIER || '').trim();
-const MAX_TOKENS = Number(process.env.OPENAI_MAX_TOKENS || 5000);
+const MAX_TOKENS = Number(process.env.OPENAI_MAX_TOKENS || 7000);
+const STORIES_MAX_TOKENS = Number(process.env.OPENAI_STORIES_TOKENS || 9000);
 const MAX_SECONDS = Number(process.env.MAX_SECONDS || 55);
 
 const BASE = `You are Travel Guide Engine. Use real destinations, neighbourhoods, streets, markets, university campuses and landmarks. Never invent exact addresses. Clearly distinguish documented history from legends or folklore. Do not claim live opening hours, current prices or availability.
@@ -40,14 +48,18 @@ You produce the PRACTICAL half of a travel guide: overview, areas/streets, attra
 Counts — areas 4, attractions 5, photo_spots 4, food 5, cafes 3, shopping 4, what_to_buy 4, route 5, tips 5.
 Each description: one sentence. Keep the route geographically sensible.`;
 
-const DISCOVER_SYS = `${BASE}
+const DISCOVERIES_SYS = `${BASE}
 
-You produce the DISCOVERY half of a travel guide: notable places plus magazine-quality place stories.
+You produce the DISCOVERIES half of a travel guide: notable places worth seeking out beyond the obvious.
 
 Discoveries — exactly 6, with variety across the categories rather than duplicates: seasonal foliage or blooms, romantic/atmospheric places, photo/check-in spots, university campuses, famous streets, hidden gems. Include less-obvious places when genuinely notable; do not limit yourself to the most famous tourist attractions. For a city such as Seoul, a campus avenue known for seasonal foliage is exactly the kind of place to surface.
-For each: area, street, why it is special (one sentence), usual season/window, nearest useful station, etiquette/caution where relevant, and a nearby place that pairs on foot.
+For each: area, street, why it is special (one sentence), usual season/window, nearest useful station, etiquette/caution where relevant, and a nearby place that pairs on foot.`;
 
-DEEP PLACE STORIES — exactly 4. These are not generic history blurbs. Build each story around a strong narrative connection to a real place, object or person. Aim for the richness of a feature story: a surprising hook, the backstory, a human turn, why the physical place matters, and a memorable present-day ending.
+const storiesSys = (count) => `${BASE}
+
+You produce DEEP PLACE STORIES for a travel guide — magazine-quality narratives, not generic history blurbs.
+
+Exactly ${count}. Build each story around a strong narrative connection to a real place, object or person. Aim for the richness of a feature story: a surprising hook, the backstory, a human turn, why the physical place matters, and a memorable present-day ending.
 
 Actively look for these story shapes when genuinely documented:
 - a recent or famous incident tied to the place (theft, disappearance, discovery, scandal, disaster, rescue, protest, unusual event);
@@ -66,7 +78,8 @@ const discovery = { type: 'object', additionalProperties: false, properties: { n
 const story = { type: 'object', additionalProperties: false, properties: { title: { type: 'string' }, type: { type: 'string' }, area: { type: 'string' }, hook: { type: 'string' }, story: { type: 'string' }, timeline: { type: 'array', items: { type: 'string' } }, key_people_objects: { type: 'array', items: { type: 'string' } }, place_connection: { type: 'string' }, verification: { type: 'string', enum: ['Well documented', 'Widely reported', 'Local legend / folklore', 'Needs local verification'] }, verification_note: { type: 'string' }, why_it_matters: { type: 'string' }, fact_check_search_terms: { type: 'array', items: { type: 'string' } } }, required: ['title', 'type', 'area', 'hook', 'story', 'timeline', 'key_people_objects', 'place_connection', 'verification', 'verification_note', 'why_it_matters', 'fact_check_search_terms'] };
 
 const guideSchema = { type: 'object', additionalProperties: false, properties: { city: { type: 'string' }, area: { type: 'string' }, summary: { type: 'string' }, best_time: { type: 'string' }, duration: { type: 'string' }, budget: { type: 'string' }, nearest_station: { type: 'string' }, areas: { type: 'array', items: item }, attractions: { type: 'array', items: item }, photo_spots: { type: 'array', items: item }, food: { type: 'array', items: item }, cafes: { type: 'array', items: item }, shopping: { type: 'array', items: item }, what_to_buy: { type: 'array', items: item }, route: { type: 'array', items: routeItem }, tips: { type: 'array', items: { type: 'string' } }, social_caption: { type: 'string' }, short_caption: { type: 'string' } }, required: ['city', 'area', 'summary', 'best_time', 'duration', 'budget', 'nearest_station', 'areas', 'attractions', 'photo_spots', 'food', 'cafes', 'shopping', 'what_to_buy', 'route', 'tips', 'social_caption', 'short_caption'] };
-const discoverSchema = { type: 'object', additionalProperties: false, properties: { discoveries: { type: 'array', items: discovery }, stories: { type: 'array', items: story } }, required: ['discoveries', 'stories'] };
+const discoveriesSchema = { type: 'object', additionalProperties: false, properties: { discoveries: { type: 'array', items: discovery } }, required: ['discoveries'] };
+const storiesSchema = { type: 'object', additionalProperties: false, properties: { stories: { type: 'array', items: story } }, required: ['stories'] };
 
 function extractText(j) {
   if (typeof j.output_text === 'string' && j.output_text.trim()) return j.output_text;
@@ -83,11 +96,11 @@ function extractText(j) {
 }
 
 // One Responses API call. Throws Error with a readable message on any failure.
-async function ask({ key, system, user, schema, name, signal }) {
+async function ask({ key, system, user, schema, name, signal, maxTokens }) {
   const payload = {
     model: MODEL,
     reasoning: { effort: EFFORT },
-    max_output_tokens: MAX_TOKENS,
+    max_output_tokens: maxTokens || MAX_TOKENS,
     input: [
       { role: 'system', content: [{ type: 'input_text', text: system }] },
       { role: 'user', content: [{ type: 'input_text', text: user }] }
@@ -134,7 +147,7 @@ module.exports = async (req, res) => {
 
   if (req.method === 'GET') {
     return res.status(200).json({
-      ok: true, service: 'travel-guide-engine', version: '2.7',
+      ok: true, service: 'travel-guide-engine', version: '2.8',
       model: MODEL, effort: EFFORT, serviceTier: SERVICE_TIER || null,
       maxSeconds: MAX_SECONDS,
       hasKey: Boolean((process.env.OPENAI_API_KEY || '').trim()),
@@ -155,23 +168,28 @@ module.exports = async (req, res) => {
 
   const context = `Destination: ${city}\nArea/street: ${area || 'Discover the best areas'}\nInterest: ${interest === 'auto' ? 'Auto Discover — choose the most rewarding mix yourself, do not wait for extra keywords' : interest}`;
   const guideUser = context + (mode === 'story' ? '\nMode: stories are the focus elsewhere — keep this practical half concise.' : '');
-  const discoverUser = context + (mode === 'area' ? '\nMode: area guide — 2 stories only, keep discoveries rich.' : '');
+  const discoveriesUser = context;
+  const storyCount = mode === 'area' ? 2 : 4;
+  const storiesUser = context;
 
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), MAX_SECONDS * 1000);
   const started = Date.now();
 
   try {
-    // Both halves in flight at once: total time is the slower one, not the sum.
-    const [guide, discover] = await Promise.all([
+    // All three in flight at once: total time is the slowest one, not the sum.
+    // Stories used to share a call (and a token budget) with discoveries; split
+    // apart, each piece needs far less headroom to finish without truncating.
+    const [guide, discoveries, stories] = await Promise.all([
       ask({ key, system: `${GUIDE_SYS}\n\n${langRule(lang)}`, user: guideUser, schema: guideSchema, name: 'guide', signal: ac.signal }),
-      ask({ key, system: `${DISCOVER_SYS}\n\n${langRule(lang)}`, user: discoverUser, schema: discoverSchema, name: 'discover', signal: ac.signal })
+      ask({ key, system: `${DISCOVERIES_SYS}\n\n${langRule(lang)}`, user: discoveriesUser, schema: discoveriesSchema, name: 'discoveries', signal: ac.signal }),
+      ask({ key, system: `${storiesSys(storyCount)}\n\n${langRule(lang)}`, user: storiesUser, schema: storiesSchema, name: 'stories', signal: ac.signal, maxTokens: STORIES_MAX_TOKENS })
     ]);
 
     return res.status(200).json({
       ...guide,
-      discoveries: discover.discoveries || [],
-      stories: discover.stories || [],
+      discoveries: discoveries.discoveries || [],
+      stories: stories.stories || [],
       _meta: { model: MODEL, effort: EFFORT, lang, ms: Date.now() - started }
     });
   } catch (e) {
