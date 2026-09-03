@@ -1,4 +1,4 @@
-// Travel Guide Engine v2.3 — api/guide.js
+// Travel Guide Engine v2.7 — api/guide.js
 // v2.2 worked but exceeded the 55s budget: one request had to write the entire
 // schema in a single pass. v2.3 splits it into two smaller requests fired in
 // parallel, so wall-clock time is the slower of the two rather than the sum.
@@ -42,17 +42,28 @@ Each description: one sentence. Keep the route geographically sensible.`;
 
 const DISCOVER_SYS = `${BASE}
 
-You produce the DISCOVERY half of a travel guide: notable places plus local stories.
+You produce the DISCOVERY half of a travel guide: notable places plus magazine-quality place stories.
 
 Discoveries — exactly 6, with variety across the categories rather than duplicates: seasonal foliage or blooms, romantic/atmospheric places, photo/check-in spots, university campuses, famous streets, hidden gems. Include less-obvious places when genuinely notable; do not limit yourself to the most famous tourist attractions. For a city such as Seoul, a campus avenue known for seasonal foliage is exactly the kind of place to surface.
 For each: area, street, why it is special (one sentence), usual season/window, nearest useful station, etiquette/caution where relevant, and a nearby place that pairs on foot.
 
-Stories — exactly 3, each 3-4 sentences, each labelled with how well it is verified.`;
+DEEP PLACE STORIES — exactly 4. These are not generic history blurbs. Build each story around a strong narrative connection to a real place, object or person. Aim for the richness of a feature story: a surprising hook, the backstory, a human turn, why the physical place matters, and a memorable present-day ending.
+
+Actively look for these story shapes when genuinely documented:
+- a recent or famous incident tied to the place (theft, disappearance, discovery, scandal, disaster, rescue, protest, unusual event);
+- a famous object/artwork/building and the people who owned, made, lost, recovered or transformed it;
+- royalty, artists, writers, designers, scientists, criminals or ordinary people whose lives intersected there;
+- rise-and-fall, lost-and-found, before-and-after, hidden origin, wartime survival, architectural controversy, local legend with a documented core;
+- an unexpected connection between the place's founding idea and something that happened there later.
+
+Do not force crime or tragedy into every destination. Prefer the strongest true narrative available. If a current/recent event cannot be confidently established, use a well-documented historical story instead. Never invent a breaking-news event, quote, exact price, exact date, casualty count or ownership chain. Clearly label uncertainty.
+
+Each story must include: a short headline, story type, area, hook (1-2 sentences), narrative (5-8 concise sentences), a 3-6 point timeline, key people/objects, the connection to the place, verification level, a verification note explaining what is solid vs uncertain, why it matters to a traveller, and 3-5 search terms a human editor can use to fact-check or expand the story. Write for an intelligent traveller, not as an encyclopedia entry.`;
 
 const item = { type: 'object', additionalProperties: false, properties: { name: { type: 'string' }, street: { type: 'string' }, description: { type: 'string' } }, required: ['name', 'street', 'description'] };
 const routeItem = { type: 'object', additionalProperties: false, properties: { name: { type: 'string' }, area: { type: 'string' }, note: { type: 'string' }, time: { type: 'string' } }, required: ['name', 'area', 'note', 'time'] };
 const discovery = { type: 'object', additionalProperties: false, properties: { name: { type: 'string' }, area: { type: 'string' }, street: { type: 'string' }, category: { type: 'string', enum: ['Seasonal', 'Photo / Check-in', 'University / Campus', 'Famous Street', 'Hidden Gem', 'Atmospheric Place'] }, description: { type: 'string' }, season: { type: 'string' }, historical_reference: { type: 'string' }, nearest_station: { type: 'string' }, etiquette: { type: 'string' }, pair_with: { type: 'string' } }, required: ['name', 'area', 'street', 'category', 'description', 'season', 'historical_reference', 'nearest_station', 'etiquette', 'pair_with'] };
-const story = { type: 'object', additionalProperties: false, properties: { title: { type: 'string' }, type: { type: 'string' }, area: { type: 'string' }, story: { type: 'string' }, verification: { type: 'string', enum: ['Well documented', 'Widely reported', 'Local legend / folklore', 'Needs local verification'] }, why_it_matters: { type: 'string' } }, required: ['title', 'type', 'area', 'story', 'verification', 'why_it_matters'] };
+const story = { type: 'object', additionalProperties: false, properties: { title: { type: 'string' }, type: { type: 'string' }, area: { type: 'string' }, hook: { type: 'string' }, story: { type: 'string' }, timeline: { type: 'array', items: { type: 'string' } }, key_people_objects: { type: 'array', items: { type: 'string' } }, place_connection: { type: 'string' }, verification: { type: 'string', enum: ['Well documented', 'Widely reported', 'Local legend / folklore', 'Needs local verification'] }, verification_note: { type: 'string' }, why_it_matters: { type: 'string' }, fact_check_search_terms: { type: 'array', items: { type: 'string' } } }, required: ['title', 'type', 'area', 'hook', 'story', 'timeline', 'key_people_objects', 'place_connection', 'verification', 'verification_note', 'why_it_matters', 'fact_check_search_terms'] };
 
 const guideSchema = { type: 'object', additionalProperties: false, properties: { city: { type: 'string' }, area: { type: 'string' }, summary: { type: 'string' }, best_time: { type: 'string' }, duration: { type: 'string' }, budget: { type: 'string' }, nearest_station: { type: 'string' }, areas: { type: 'array', items: item }, attractions: { type: 'array', items: item }, photo_spots: { type: 'array', items: item }, food: { type: 'array', items: item }, cafes: { type: 'array', items: item }, shopping: { type: 'array', items: item }, what_to_buy: { type: 'array', items: item }, route: { type: 'array', items: routeItem }, tips: { type: 'array', items: { type: 'string' } }, social_caption: { type: 'string' }, short_caption: { type: 'string' } }, required: ['city', 'area', 'summary', 'best_time', 'duration', 'budget', 'nearest_station', 'areas', 'attractions', 'photo_spots', 'food', 'cafes', 'shopping', 'what_to_buy', 'route', 'tips', 'social_caption', 'short_caption'] };
 const discoverSchema = { type: 'object', additionalProperties: false, properties: { discoveries: { type: 'array', items: discovery }, stories: { type: 'array', items: story } }, required: ['discoveries', 'stories'] };
@@ -123,7 +134,7 @@ module.exports = async (req, res) => {
 
   if (req.method === 'GET') {
     return res.status(200).json({
-      ok: true, service: 'travel-guide-engine', version: '2.3',
+      ok: true, service: 'travel-guide-engine', version: '2.7',
       model: MODEL, effort: EFFORT, serviceTier: SERVICE_TIER || null,
       maxSeconds: MAX_SECONDS,
       hasKey: Boolean((process.env.OPENAI_API_KEY || '').trim()),
